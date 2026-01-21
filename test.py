@@ -4,7 +4,7 @@ from typing import List, Tuple
 
 items = []
 
-for i in range(2000):
+for i in range(10):
     weight = random.random()  # zufälliges Gewicht
     value = random.random()  # zufälliger Wert zwischen 0 und 1
     stonks = value / weight  # Effizienz der Items
@@ -159,7 +159,7 @@ for item in items_for_core:
 for item in items_for_core:
     if abs(item[3]) > relaxierte_loesung - (core_value + value_help):
         print("Die Core Lösung ist: ", core_value + value_help)
-        print(f"Der Core war {len(items_in_core)} Groß: ")
+        print(f"Der Core war {len(items_in_core)} Groß")
         break
     else:
         if item[3] > 0:  # Wenn Item über Dantzig Ray liegt
@@ -172,7 +172,19 @@ for item in items_for_core:
         value_help = pareto_knapsack(items_in_core, core_volumen)
 
 
-# def branch_bound():
+bestes_blatt =0
+bauminit = []
+bauminit.append(items)
+bauminit.append(gesamt_volumen)
+bauminit.append(relaxierte_loesung)
+baum = []
+baum.append(bauminit)
+#print(baum)
+
+def branch_bound(baumitem):
+    print(baumitem[0][0])
+    #Ein Element wird Gewählt und auf 1 und 0 gesetzt
+
 
 #print("Gewählte Items:", items_help)
 
@@ -185,3 +197,8 @@ for item in items_for_core:
 best_value = pareto_knapsack(items_for_core, gesamt_volumen)
 print("Pareto Lösung:", best_value)
 #TODO print("Gewählte Items:", best_items)
+
+while baum != []:
+    branch_bound(max(baum, key=lambda x: x[2]))
+
+

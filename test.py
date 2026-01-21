@@ -1,9 +1,10 @@
 import random
 from itertools import combinations
+from typing import List, Tuple
 
 items = []
 
-for i in range(20):
+for i in range(2000):
     weight = random.random()  # zufälliges Gewicht
     value = random.random()  # zufälliger Wert zwischen 0 und 1
     stonks = value / weight  # Effizienz der Items
@@ -96,6 +97,48 @@ def knapsack_bruteforce(items, capacity):
     return best_value, best_combination
 
 
+def pareto_knapsack(items, max_weight):
+    """
+    items: Liste von (gewicht, wert)
+    max_weight: Maximales Volumen/Gewicht des Rucksacks
+
+    Rückgabe:
+    (bestes_gewicht, bester_wert) der besten Pareto-optimalen Lösung ≤ max_weight
+    """
+
+    # Start: leere Lösung
+    pareto = [(0, 0)]  # (gewicht, wert)
+    for w, v,x ,y, z in items:
+        neue_lösungen = []
+
+        for pw, pv in pareto:
+            nw, nv = pw + w, pv + v
+            if nw <= max_weight:
+                neue_lösungen.append((nw, nv))
+
+        pareto += neue_lösungen
+        pareto = pareto_filter(pareto)
+
+    # beste Lösung (maximaler Wert)
+    return max(pareto, key=lambda x: x[1])[1]
+
+
+def pareto_filter(solutions: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
+    """
+    Entfernt dominierte Lösungen
+    """
+    solutions = sorted(solutions, key=lambda x: (x[0], -x[1]))
+    pareto = []
+
+    max_value_so_far = -1
+    for weight, value in solutions:
+        if value > max_value_so_far:
+            pareto.append((weight, value))
+            max_value_so_far = value
+
+    return pareto
+
+
 # Start Initialisirung vom Core Rucksack
 core_volumen = gesamt_volumen
 core_value = 0
@@ -125,12 +168,20 @@ for item in items_for_core:
         items_in_core.append(item)
         if len(items_in_core) > 20:
             print("Aua es tut so weh")
-        value_help, items_help = knapsack_bruteforce(items_in_core, core_volumen)
+            # value_help, items_help = knapsack_bruteforce(items_in_core, core_volumen)
+        value_help = pareto_knapsack(items_in_core, core_volumen)
+
+
 # def branch_bound():
 
-print("Gewählte Items:", items_help)
+#print("Gewählte Items:", items_help)
 
-best_value, best_items = knapsack_bruteforce(items_for_core, gesamt_volumen)
+#Bruteforce auf Alles. Versagt nach 25 Elementen
+#best_value, best_items = knapsack_bruteforce(items_for_core, gesamt_volumen)
+#print("Bruteforce Lösung:", best_value)
+#print("Gewählte Items:", best_items)
 
-print("Bruteforce Lösung:", best_value)
-print("Gewählte Items:", best_items)
+#Pareto auf alles
+best_value = pareto_knapsack(items_for_core, gesamt_volumen)
+print("Pareto Lösung:", best_value)
+#TODO print("Gewählte Items:", best_items)

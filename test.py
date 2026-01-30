@@ -2,10 +2,11 @@ import random
 from itertools import combinations
 from typing import List, Tuple
 import copy
+import time
 
 items = []
 
-for i in range(2000):
+for i in range(1000):
     weight = random.random()  # zufälliges Gewicht
     value = random.random()  # zufälliger Wert zwischen 0 und 1
     stonks = value / weight  # Effizienz der Items
@@ -45,10 +46,10 @@ def relax(items, volumen):
             inhalt = volumen
             steigung_core = item[2]
             break
-    return core_item, relaxierte_loesung, steigung_core, core_item
+    return core_item, relaxierte_loesung, steigung_core
 
 
-core_item, relaxierte_loesung, steigung_core, core_item = relax(items, gesamt_volumen)
+core_item, relaxierte_loesung, steigung_core = relax(items, gesamt_volumen)
 
 print("Das Core Item ist: ", core_item)
 print("Die Relaxierte Lösung ist: ", relaxierte_loesung)
@@ -140,6 +141,7 @@ def pareto_filter(solutions: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
 
 
 # Start Initialisirung vom Core Rucksack
+core_start_time = time.perf_counter()
 core_volumen = gesamt_volumen
 core_value = 0
 items_in_core = []
@@ -158,7 +160,9 @@ for item in items_for_core:
 
 for item in items_for_core:
     if abs(item[3]) > relaxierte_loesung - (core_value + value_help):
+        core_end_time = time.perf_counter()
         print("Die Core Lösung ist: ", core_value + value_help)
+        print("Die Core Laufzeit war: ", core_end_time-core_start_time)
         #print(f"Der Core war {len(items_in_core)} Groß")
         break
     else:
@@ -166,8 +170,8 @@ for item in items_for_core:
             core_volumen += item[0]
             core_value -= item[1]
         items_in_core.append(item)
-        if len(items_in_core) > 20:
-            print("Aua es tut so weh")
+        #if len(items_in_core) > 20:
+            #print("Aua es tut so weh")
             # value_help, items_help = knapsack_bruteforce(items_in_core, core_volumen)
         value_help = pareto_knapsack(items_in_core, core_volumen)
 
@@ -180,9 +184,15 @@ bauminit.append(relaxierte_loesung)#Wert Relaxlösung + feste Objekte
 bauminit.append(0)#Wert von festen Objekten
 baum = []
 baum.append(bauminit)
+global bound_time
+bound_time = 0
+suchen_time = 0
+branch_time= 0
 #print(baum)
 
 def bound(top):
+    global bound_time
+    bound_start_time = time.perf_counter()
     #print(top)
     full_counter = 0
     #print(max(baum, key=lambda x: x[2])[2])
@@ -190,6 +200,7 @@ def bound(top):
         if i[2] <= top:
             baum.pop(full_counter)
         full_counter += 1
+    bound_time +=(time.perf_counter()-bound_start_time)
 
 
 
@@ -231,24 +242,41 @@ def branch(baumitem, top):
 #print("Bruteforce Lösung:", best_value)
 #print("Gewählte Items:", best_items)
 
-#Pareto auf alles
+#Nemhauser-Ulmann auf alles
+pareto_start_time = time.perf_counter()
 best_value = pareto_knapsack(items_for_core, gesamt_volumen)
+pareto_end_time = time.perf_counter()
 print("Pareto Lösung:", best_value)
+print("Die Pareto Laufzeit war:", pareto_end_time-pareto_start_time)
 #TODO print("Gewählte Items:", best_items)
-aua=0
+
+#Branch and Bound auf alles
+#aua=0
+bnb_start_time = time.perf_counter()
 while baum != []:
-    aua +=1
+    #aua +=1
     index, _ = max(enumerate(baum), key=lambda x: x[1][2])
     #print(baum[index][2])
     #print(index)
     #print("Hier Baum Bruder", baum)
+    suchen_start_time = time.perf_counter()
     zwischenspeicher = copy.deepcopy(baum[index])
+    print(zwischenspeicher)
+    suchen_time += (time.perf_counter() - suchen_start_time)
     baum.pop(index)
+
+    branch_start_time = time.perf_counter()
     bestes_blatt= branch(zwischenspeicher, bestes_blatt)
+    branch_time += (time.perf_counter() - branch_start_time)
     #print(baum)
-    if aua%1000==0:
-        print("Aua es tut so weh:", len(baum))
+    #if aua%1000==0:
+        #print("Aua es tut so weh:", len(baum))
         #print(max(baum, key=lambda x: x[2])[2])
-print("BnB hat so viele Runden gebraucht :" ,aua)
+#print("BnB hat so viele Runden gebraucht :" ,aua)
+bnb_end_time = time.perf_counter()
 print("Die Branch_Bound Lösung ist: ", bestes_blatt)
+print("Die Branch_Bound Laufzeit war:", bnb_end_time-bnb_start_time)
+print("Bound hat so lange gebraucht:", bound_time)
+print("Das Wählen des nächsten Elements hat so lange gebraucht: ", suchen_time)
+print("Branch hat so lange gebraucht: ", branch_time)
 

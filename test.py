@@ -29,10 +29,11 @@ items.sort(key=stonks_sort, reverse=True)
 #   print(item)
 
 gesamt_volumen = 10
-
+global greedy
 
 # Relaxierte Lösung
-def relax(items, volumen):
+def relax(items, volumen, initierung):
+    global greedy
     core_item = -1
     inhalt = 0
     relaxierte_loesung = 0
@@ -43,6 +44,8 @@ def relax(items, volumen):
             inhalt += item[0]
             relaxierte_loesung += item[1]
         else:
+            if initierung == True:
+                greedy = relaxierte_loesung
             relaxierte_loesung += item[1] / (item[0] / (volumen - inhalt))
             inhalt = volumen
             steigung_core = item[2]
@@ -50,7 +53,7 @@ def relax(items, volumen):
     return core_item, relaxierte_loesung, steigung_core
 
 
-core_item, relaxierte_loesung, steigung_core = relax(items, gesamt_volumen)
+core_item, relaxierte_loesung, steigung_core = relax(items, gesamt_volumen, True)
 
 #print("Das Core Item ist: ", core_item)
 print("Die Relaxierte Lösung ist: ", relaxierte_loesung)
@@ -178,7 +181,7 @@ for item in items_for_core:
 
 
 bestes_blatt= []
-bestes_blatt.append(0)
+bestes_blatt.append(greedy)
 #bestes_blatt.append([])
 
 bauminit = []
@@ -226,7 +229,7 @@ def branch(baumitem, top):
     #index_item = items[baumitem[0]][3]
     #Bestes Item wird auf 0 gesetzt
     baumitem[0] += 1
-    baumitem[2]=relax(items[baumitem[0]:elemente], baumitem[1])[1] + baumitem[3]
+    baumitem[2]=relax(items[baumitem[0]:elemente], baumitem[1], False)[1] + baumitem[3]
     #print("2.aufrgu", baumitem)
     if baumitem[0] != elemente-1 and baumitem[2]>top[0]:
         suchen_start_time = time.perf_counter()
@@ -238,7 +241,7 @@ def branch(baumitem, top):
     if baumitem[1]-gewicht_item >= 0:
         baumitem[3] += wert_item
         baumitem[1] -= gewicht_item
-        baumitem[2] = relax(items[baumitem[0]:elemente], baumitem[1])[1] + baumitem[3]
+        baumitem[2] = relax(items[baumitem[0]:elemente], baumitem[1], False)[1] + baumitem[3]
         #baumitem[4].append(index_item)
         #print("3.aufrgu", baumitem)
         if baumitem[3] > top[0]:

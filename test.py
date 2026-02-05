@@ -5,11 +5,12 @@ import copy
 import time
 
 items = []
-elemente = 20000
+elemente = 10000
+gesamt_volumen = int(1e12)
 
 for i in range(elemente):
-    weight = random.random()  # zufälliges Gewicht
-    value = random.random()  # zufälliger Wert zwischen 0 und 1
+    weight = random.randint(1, int(1e10))  # zufälliges Gewicht
+    value = random.randint(1, int(1e10))  # zufälliger Wert zwischen 1 und 10000000000
     stonks = value / weight  # Effizienz der Items
     number = i
     items.append((weight, value, stonks, number))
@@ -28,7 +29,7 @@ items.sort(key=stonks_sort, reverse=True)
 # for item in items[:10]:
 #   print(item)
 
-gesamt_volumen = 10
+
 global greedy
 
 # Relaxierte Lösung

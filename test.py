@@ -6,16 +6,17 @@ import time
 
 core_gesamtzeit =0
 bnb_gesamtzeit = 0
+richtig = 0
 runden = 1000
 
 for i in range(runden):
     items = []
     elemente = 1000
-    gesamt_volumen = 400
+    gesamt_volumen = int(1e12)
 
     for i in range(elemente):
-        weight = random.random()  # zufälliges Gewicht
-        value = random.random()  # zufälliger Wert zwischen 0 und 1
+        weight = random.randint(1, int(1e10))  # zufälliges Gewicht
+        value = random.randint(1, int(1e10))  # zufälliger Wert zwischen 1 und 10000000000
         stonks = value / weight  # Effizienz der Items
         number = i
         items.append((weight, value, stonks, number))
@@ -319,6 +320,9 @@ for i in range(runden):
     # print("Branch hat so lange gebraucht: ", branch_time)
     bnb_gesamtzeit += bnb_laufzeit
     core_gesamtzeit += core_laufzeit
+    if(bestes_blatt[0]==core_value + value_help):
+        richtig+=1
 
 print("Die Durchschnittliche Core Laufzeit war:", core_gesamtzeit/runden)
 print("Die Durchschnittliche Branch_Bound Laufzeit war:", bnb_gesamtzeit/runden)
+print("Deine Erfolgsrate liegt bei ", (richtig/runden)*100, "%")

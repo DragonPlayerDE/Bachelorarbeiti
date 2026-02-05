@@ -1,12 +1,12 @@
 import random
 from itertools import combinations
-from typing import List, Tuple
 import copy
 import time
+from typing import List, Tuple, Optional
 
 items = []
 elemente = 10000
-gesamt_volumen = int(1e12)
+gesamt_volumen = int(1e13)
 
 for i in range(elemente):
     weight = random.randint(1, int(1e10))  # zufälliges Gewicht
@@ -195,8 +195,12 @@ baum = []
 baum.append(bauminit)
 global bound_time
 bound_time = 0
+global schreiben_time
+schreiben_time = 0
 global suchen_time
 suchen_time = 0
+global relax_time
+relax_time = 0
 branch_time= 0
 #global hinzugefügt
 #hinzugefügt = 0
@@ -205,9 +209,9 @@ branch_time= 0
 #print(baum)
 
 def bound(top):
-    global bound_time
+    global suchen_time
     #global gelöscht
-    #bound_start_time = time.perf_counter()
+    suchen_start_time = time.perf_counter()
     #print(top)
     full_counter = 0
     #print(max(baum, key=lambda x: x[2])[2])
@@ -216,7 +220,7 @@ def bound(top):
             baum.pop(full_counter)
             #gelöscht +=1
         full_counter += 1
-    #bound_time +=(time.perf_counter()-bound_start_time)
+    suchen_time +=(time.perf_counter()-suchen_start_time)
 
 
 
@@ -224,25 +228,30 @@ def branch(baumitem, top):
     #global hinzugefügt
     #print(baumitem)
     #print(baumitem[0])
-    global suchen_time
+    global schreiben_time
+    global relax_time
     wert_item = items[baumitem[0]][1]
     gewicht_item = items[baumitem[0]][0]
     #index_item = items[baumitem[0]][3]
     #Bestes Item wird auf 0 gesetzt
     baumitem[0] += 1
+    relax_start_time = time.perf_counter()
     baumitem[2]=relax(items[baumitem[0]:elemente], baumitem[1], False)[1] + baumitem[3]
+    relax_time += (time.perf_counter() - relax_start_time)
     #print("2.aufrgu", baumitem)
     if baumitem[0] != elemente-1 and baumitem[2]>top[0]:
-        suchen_start_time = time.perf_counter()
+        schreiben_start_time = time.perf_counter()
         baum.append(copy.deepcopy(baumitem))
-        suchen_time += (time.perf_counter() - suchen_start_time)
+        schreiben_time += (time.perf_counter() - schreiben_start_time)
         #hinzugefügt +=1
 
     # Bestes Item wird auf 1 gesetzt
     if baumitem[1]-gewicht_item >= 0:
         baumitem[3] += wert_item
         baumitem[1] -= gewicht_item
+        relax_start_time = time.perf_counter()
         baumitem[2] = relax(items[baumitem[0]:elemente], baumitem[1], False)[1] + baumitem[3]
+        relax_time += (time.perf_counter() - relax_start_time)
         #baumitem[4].append(index_item)
         #print("3.aufrgu", baumitem)
         if baumitem[3] > top[0]:
@@ -251,9 +260,9 @@ def branch(baumitem, top):
             #print(top)
             bound(top[0])
         if baumitem[0] != elemente-1 and baumitem[2] > top[0]:
-            suchen_start_time = time.perf_counter()
+            schreiben_start_time = time.perf_counter()
             baum.append(copy.deepcopy(baumitem))
-            suchen_time += (time.perf_counter() - suchen_start_time)
+            schreiben_time += (time.perf_counter() - schreiben_start_time)
             #hinzugefügt += 1
 
     return top
@@ -278,17 +287,20 @@ def branch(baumitem, top):
 
 #Branch and Bound auf alles
 aua=0
+suchen_haupt_time=0
 bnb_start_time = time.perf_counter()
 while baum != []:
     aua +=1
+    suchen_haupt_start_time = time.perf_counter()
     index, _ = max(enumerate(baum), key=lambda x: x[1][2])
+    suchen_haupt_time += (time.perf_counter() - suchen_haupt_start_time)
     #print(baum[index][2])
     #print(index)
     #print("Hier Baum Bruder", baum)
-    suchen_start_time = time.perf_counter()
+    schreiben_start_time = time.perf_counter()
     zwischenspeicher = copy.deepcopy(baum[index])
     #print(zwischenspeicher)
-    suchen_time += (time.perf_counter() - suchen_start_time)
+    schreiben_time += (time.perf_counter() - schreiben_start_time)
     baum.pop(index)
     #gelöscht += 1
     #branch_start_time = time.perf_counter()
@@ -306,5 +318,8 @@ bnb_end_time = time.perf_counter()
 print("Die Branch_Bound Lösung ist: ", bestes_blatt[0])#, "mit den Elementen:", sorted(bestes_blatt[1]))
 print("Die Branch_Bound Laufzeit war:", bnb_end_time-bnb_start_time)
 #print("Bound hat so lange gebraucht:", bound_time)
-print("Das kopieren hat so lange gebraucht: ", suchen_time)
+print("Das kopieren hat so lange gebraucht: ", schreiben_time)
+print("Das Suchen hat so lange gebraucht:", suchen_time)
+print("das suchen in while hat so lange gebraucht:", suchen_haupt_time)
 #print("Branch hat so lange gebraucht: ", branch_time)
+print("Die Relaxlösung hat so lange gebraucht:", relax_time)

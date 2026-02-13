@@ -6,22 +6,33 @@ from typing import List, Tuple, Optional
 from queue import PriorityQueue
 
 items = []
-elemente = 10000
-gesamt_volumen = int(1e13)
+elemente = 1000
+gesamt_volumen = int(1e12)
 arr = []
 class Item:
     def __init__(self, weight, value):
         self.weight = weight
         self.value = value
 
+def items_create(set):
+    if set==0:
+        for i in range(elemente):
+            weight = random.randint(1, int(1e10))  # zufälliges Gewicht
+            value = random.randint(1, int(1e10))  # zufälliger Wert zwischen 1 und 10000000000
+            arr.append(Item(weight, value))
+            stonks = value / weight  # Effizienz der Items
+            number = i
+            items.append((weight, value, stonks, number))
+    if set==1:
+        for i in range(elemente):
+            weight = random.randint(1, int(1e10))  # zufälliges Gewicht
+            value = int(weight*(1+(random.random()/10))) # Value ist 0-10% höher als Weight
+            arr.append(Item(weight, value))
+            stonks = value / weight  # Effizienz der Items
+            number = i
+            items.append((weight, value, stonks, number))
 
-for i in range(elemente):
-    weight = random.randint(1, int(1e10))  # zufälliges Gewicht
-    value = random.randint(1, int(1e10))  # zufälliger Wert zwischen 1 und 10000000000
-    arr.append(Item(weight, value))
-    stonks = value / weight  # Effizienz der Items
-    number = i
-    items.append((weight, value, stonks, number))
+items_create(1)
 
 # Ausgabe der ersten 10 zur Kontrolle
 # for item in items[:10]:
@@ -326,11 +337,11 @@ bnb_end_time = time.perf_counter()
 print("Die Branch_Bound Lösung ist: ", bestes_blatt[0])#, "mit den Elementen:", sorted(bestes_blatt[1]))
 print("Die Branch_Bound Laufzeit war:", bnb_end_time-bnb_start_time)
 #print("Bound hat so lange gebraucht:", bound_time)
-print("Das kopieren hat so lange gebraucht: ", schreiben_time)
-print("Das Suchen hat so lange gebraucht:", suchen_time)
-print("das suchen in while hat so lange gebraucht:", suchen_haupt_time)
+#print("Das kopieren hat so lange gebraucht: ", schreiben_time)
+#print("Das Suchen hat so lange gebraucht:", suchen_time)
+#print("das suchen in while hat so lange gebraucht:", suchen_haupt_time)
 #print("Branch hat so lange gebraucht: ", branch_time)
-print("Die Relaxlösung hat so lange gebraucht:", relax_time)
+#print("Die Relaxlösung hat so lange gebraucht:", relax_time)
 
 
 

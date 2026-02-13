@@ -15,21 +15,36 @@ core_gesamtzeit =0
 bnb_gesamtzeit = 0
 geeks_gesamtzeit =0
 richtig = 0
-runden = 1000
+runden = 100
 
 for i in range(runden):
+    print(i)
     items = []
-    elemente = 1000
-    gesamt_volumen = int(1e12)
+    elemente = 100
+    gesamt_volumen = int(4*1e11)
     arr=[]
 
-    for i in range(elemente):
-        weight = random.randint(1, int(1e10))  # zufälliges Gewicht
-        value = random.randint(1, int(1e10))  # zufälliger Wert zwischen 1 und 10000000000
-        arr.append(Item(weight, value))
-        stonks = value / weight  # Effizienz der Items
-        number = i
-        items.append((weight, value, stonks, number))
+
+    def items_create(set):
+        if set == 0:
+            for i in range(elemente):
+                weight = random.randint(1, int(1e10))  # zufälliges Gewicht
+                value = random.randint(1, int(1e10))  # zufälliger Wert zwischen 1 und 10000000000
+                arr.append(Item(weight, value))
+                stonks = value / weight  # Effizienz der Items
+                number = i
+                items.append((weight, value, stonks, number))
+        if set == 1:
+            for i in range(elemente):
+                weight = random.randint(1, int(1e10))  # zufälliges Gewicht
+                value = int(weight * (1 + (random.random() / 100)))  # Value ist 0-10% höher als Weight
+                arr.append(Item(weight, value))
+                stonks = value / weight  # Effizienz der Items
+                number = i
+                items.append((weight, value, stonks, number))
+
+
+    items_create(1)
 
 
     # Ausgabe der ersten 10 zur Kontrolle

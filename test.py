@@ -14,6 +14,8 @@ class Item:
 core_gesamtzeit =0
 bnb_gesamtzeit = 0
 geeks_gesamtzeit =0
+geeks_relaxzeit= 0
+ichs_relaxzeit=0
 geeks_runden =0
 ichs_runden =0
 richtig = 0
@@ -69,6 +71,8 @@ for i in range(runden):
 
     # Relaxierte Lösung
     def relax_init(items, volumen, initierung):
+        ichs_relax_start_time = time.perf_counter()
+        global ichs_relaxzeit
         global ichs_runden
         ichs_runden+=1
         global greedy
@@ -88,6 +92,7 @@ for i in range(runden):
                 inhalt = volumen
                 steigung_core = item[2]
                 break
+        ichs_relaxzeit+=(time.perf_counter()-ichs_relax_start_time)
         return core_item, relaxierte_loesung, steigung_core
 
 
@@ -266,6 +271,8 @@ for i in range(runden):
 
     def bound(top):
         global bound_time
+        global ichs_runden
+        ichs_runden += 1
         # global gelöscht
         # bound_start_time = time.perf_counter()
         # print(top)
@@ -383,6 +390,8 @@ for i in range(runden):
 
 
     def bound(u, n, W, arr):
+        geeks_relax_start_time = time.perf_counter()
+        global geeks_relaxzeit
         # Calculate the upper bound of profit for a node in the search tree
         global geeks_runden
         geeks_runden+=1
@@ -402,7 +411,7 @@ for i in range(runden):
         # If there are still items left, calculate the fractional contribution of the next item
         if j < n:
             profit_bound += int((W - total_weight) * arr[j].value / arr[j].weight)
-
+        geeks_relaxzeit+=(time.perf_counter()-geeks_relax_start_time)
         return profit_bound
 
 
@@ -463,3 +472,5 @@ print("Die Durchschnittliche Geeks Laufzeit war:", geeks_gesamtzeit/runden)
 print("Deine Erfolgsrate liegt bei ", (richtig/runden)*100, "%")
 print("Ich hab durchschnittlich so viele Runden gebraucht:", ichs_runden/runden)
 print("Geeks hat durchschnittlich so viele Runden gebraucht:", geeks_runden/runden)
+print("Die Durchschnittliche Ichs_relax Laufzeit war:", ichs_relaxzeit/runden)
+print("Die Durchschnittliche Geeks_Relax Laufzeit war:", geeks_relaxzeit/runden)

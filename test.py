@@ -20,6 +20,11 @@ geeks_runden =0
 ichs_runden =0
 richtig = 0
 runden = 100
+bound_time= 0
+global suchen_time
+suchen_time = 0
+global sortieren_time
+sortieren_time =0
 
 for i in range(runden):
     print(i)
@@ -256,10 +261,6 @@ for i in range(runden):
     bauminit.append([])  # Elemente der Lösung
     baum = []
     baum.append(bauminit)
-    global bound_time
-    bound_time = 0
-    global suchen_time
-    suchen_time = 0
     branch_time = 0
 
 
@@ -274,7 +275,7 @@ for i in range(runden):
         global ichs_runden
         ichs_runden += 1
         # global gelöscht
-        # bound_start_time = time.perf_counter()
+        bound_start_time = time.perf_counter()
         # print(top)
         full_counter = 0
         # print(max(baum, key=lambda x: x[2])[2])
@@ -283,7 +284,7 @@ for i in range(runden):
                 baum.pop(full_counter)
                 # gelöscht +=1
             full_counter += 1
-        # bound_time +=(time.perf_counter()-bound_start_time)
+        bound_time +=(time.perf_counter()-bound_start_time)
 
 
     def branch(baumitem, top):
@@ -347,7 +348,9 @@ for i in range(runden):
     bnb_start_time = time.perf_counter()
     while baum != []:
         aua += 1
+        sortiern_start_time = time.perf_counter()
         index, _ = max(enumerate(baum), key=lambda x: x[1][2])
+        sortieren_time += (time.perf_counter() - sortiern_start_time)
         # print(baum[index][2])
         # print(index)
         # print("Hier Baum Bruder", baum)
@@ -474,3 +477,6 @@ print("Ich hab durchschnittlich so viele Runden gebraucht:", ichs_runden/runden)
 print("Geeks hat durchschnittlich so viele Runden gebraucht:", geeks_runden/runden)
 print("Die Durchschnittliche Ichs_relax Laufzeit war:", ichs_relaxzeit/runden)
 print("Die Durchschnittliche Geeks_Relax Laufzeit war:", geeks_relaxzeit/runden)
+print("Die Durchschnittliche Ichs_bound Laufzeit war:", bound_time/runden)
+print("Das Kopieren hat durchschnittlich so lange geadauert:", suchen_time/runden)
+print("Das suchen des näächsten Elements dauert:", sortieren_time/runden)

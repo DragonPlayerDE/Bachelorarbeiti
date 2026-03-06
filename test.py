@@ -14,6 +14,8 @@ class Item:
 core_gesamtzeit =0
 bnb_gesamtzeit = 0
 geeks_gesamtzeit =0
+geeks_runden =0
+ichs_runden =0
 richtig = 0
 runden = 100
 
@@ -37,7 +39,7 @@ for i in range(runden):
         if set == 1:
             for i in range(elemente):
                 weight = random.randint(1, int(1e10))  # zufälliges Gewicht
-                value = int(weight * (1 + (random.random() / 100)))  # Value ist 0-10% höher als Weight
+                value = int(weight * (1 + (random.random() / 10)))  # Value ist 0-10% höher als Weight
                 arr.append(Item(weight, value))
                 stonks = value / weight  # Effizienz der Items
                 number = i
@@ -66,7 +68,9 @@ for i in range(runden):
 
 
     # Relaxierte Lösung
-    def relax(items, volumen, initierung):
+    def relax_init(items, volumen, initierung):
+        global ichs_runden
+        ichs_runden+=1
         global greedy
         core_item = -1
         inhalt = 0
@@ -87,7 +91,28 @@ for i in range(runden):
         return core_item, relaxierte_loesung, steigung_core
 
 
-    core_item, relaxierte_loesung, steigung_core = relax(items, gesamt_volumen, True)
+    core_item, relaxierte_loesung, steigung_core = relax_init(items, gesamt_volumen, True)#Relax Initialisierung für Core
+
+    def relax(u, n, W, arr):
+        # Calculate the upper bound of profit for a node in the search tree
+        if u.weight >= W:
+            return 0
+
+        profit_bound = u.profit
+        j = u.level + 1
+        total_weight = u.weight
+
+        # Greedily add items to the knapsack until the weight limit is reached
+        while j < n and total_weight + arr[j].weight <= W:
+            total_weight += arr[j].weight
+            profit_bound += arr[j].value
+            j += 1
+
+        # If there are still items left, calculate the fractional contribution of the next item
+        if j < n:
+            profit_bound += int((W - total_weight) * arr[j].value / arr[j].weight)
+
+        return profit_bound
 
     # print("Das Core Item ist: ", core_item)
     #print("Die Relaxierte Lösung ist: ", relaxierte_loesung)
@@ -264,7 +289,7 @@ for i in range(runden):
         # index_item = items[baumitem[0]][3]
         # Bestes Item wird auf 0 gesetzt
         baumitem[0] += 1
-        baumitem[2] = relax(items[baumitem[0]:elemente], baumitem[1], False)[1] + baumitem[3]
+        baumitem[2] = relax_init(items[baumitem[0]:elemente], baumitem[1], False)[1] + baumitem[3]
         # print("2.aufrgu", baumitem)
         if baumitem[0] != elemente - 1 and baumitem[2] > top[0]:
             suchen_start_time = time.perf_counter()
@@ -276,7 +301,7 @@ for i in range(runden):
         if baumitem[1] - gewicht_item >= 0:
             baumitem[3] += wert_item
             baumitem[1] -= gewicht_item
-            baumitem[2] = relax(items[baumitem[0]:elemente], baumitem[1], False)[1] + baumitem[3]
+            baumitem[2] = relax_init(items[baumitem[0]:elemente], baumitem[1], False)[1] + baumitem[3]
             # baumitem[4].append(index_item)
             # print("3.aufrgu", baumitem)
             if baumitem[3] > top[0]:
@@ -347,7 +372,6 @@ for i in range(runden):
     core_gesamtzeit += core_laufzeit
 
 
-
     class Node:
         def __init__(self, level, profit, weight):
             self.level = level  # Level of the node in the decision tree (or index in arr[])
@@ -360,6 +384,8 @@ for i in range(runden):
 
     def bound(u, n, W, arr):
         # Calculate the upper bound of profit for a node in the search tree
+        global geeks_runden
+        geeks_runden+=1
         if u.weight >= W:
             return 0
 
@@ -435,3 +461,5 @@ print("Die Durchschnittliche Core Laufzeit war:", core_gesamtzeit/runden)
 print("Die Durchschnittliche Branch_Bound Laufzeit war:", bnb_gesamtzeit/runden)
 print("Die Durchschnittliche Geeks Laufzeit war:", geeks_gesamtzeit/runden)
 print("Deine Erfolgsrate liegt bei ", (richtig/runden)*100, "%")
+print("Ich hab durchschnittlich so viele Runden gebraucht:", ichs_runden/runden)
+print("Geeks hat durchschnittlich so viele Runden gebraucht:", geeks_runden/runden)

@@ -60,7 +60,6 @@ for i in range(runden):
 
     items_create(set)
 
-
     """Ausgabe der ersten 10 zur Kontrolle"""
     # for item in items[:10]:
     #    print(item)
@@ -219,26 +218,13 @@ for i in range(runden):
         core_volumen = gesamt_volumen-greedy_weight
         value_feste_items = greedy
         items_in_core = []
+        items_in_core.append(items_for_core[0])
         current_core_value = 0
 
 
-        for item in items_for_core:
+        for item in items_for_core[1:]:
             """Abbruchbedingung wenn Abstand größer als Differenz zwischen Relaxlösung und derzeitiger Core Lösung"""
             if abs(item[3]) > relaxierte_loesung - (value_feste_items + current_core_value):
-                """"""
-                stopp_pls=value_feste_items+current_core_value
-                if item[3] > 0:  # Wenn Item über Dantzig Ray liegt
-                    core_volumen += item[0]
-                    value_feste_items -= item[1]
-                items_in_core.append(item)
-                current_core_value = pareto_knapsack(items_in_core, core_volumen)
-                if stopp_pls != current_core_value+value_feste_items:
-                    print("So eine Scheise")
-
-
-
-
-                """"""
                 core_end_time = time.perf_counter()
                 core_laufzeit = core_end_time - core_start_time
                 #print(f"Der Core war {len(items_in_core)} Groß")
@@ -484,6 +470,9 @@ for i in range(runden):
 
     if (max_profit < core_value):
         print(f"Core zu groß: {max_profit} < {core_value}")
+        if max_profit ==0:
+            print(items)
+            print(min(enumerate(items), key=lambda x: x[0]))
         """for items in items_for_core:
             print(abs(items[3]))"""
 
@@ -494,8 +483,8 @@ for i in range(runden):
 
 
 
-#print("Die Durchschnittliche Core Laufzeit war:", core_gesamtzeit/runden)
-print("Die Durchschnittliche Nemhauser Ulmann Laufzeit war: ", pareto_gesamtzeit/runden)
+print("Die Durchschnittliche Core Laufzeit war:", core_gesamtzeit/runden)
+#print("Die Durchschnittliche Nemhauser Ulmann Laufzeit war: ", pareto_gesamtzeit/runden)
 #print("Die Durchschnittliche Branch_Bound Laufzeit war:", bnb_gesamtzeit/runden)
 print("Die Durchschnittliche Geeks Laufzeit war:", geeks_gesamtzeit/runden)
 print("Deine Erfolgsrate liegt bei ", (richtig/runden)*100, "%")

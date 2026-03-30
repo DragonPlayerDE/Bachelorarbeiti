@@ -20,13 +20,15 @@ ichs_relaxzeit=0
 geeks_runden =0
 ichs_runden =0
 richtig = 0
-runden = 100
+runden = 10
 bound_time= 0
 global suchen_time
 suchen_time = 0
 global sortieren_time
 sortieren_time =0
-set = 1
+set = 2
+clusteranzahl = 4 #Wenn Set == 2 relevant
+
 
 """Anzahl Runden wird festgelegt und Array initialisiert"""
 for i in range(runden):
@@ -51,11 +53,22 @@ for i in range(runden):
             """Value Wert knapp über Weight Wert"""
             for i in range(elemente):
                 weight = random.randint(1, int(1e10))  # zufälliges Gewicht
-                value = int(weight * (1 + (random.random() / 10)))  # Value ist 0-10% höher als Weight
+                value = int(weight * (1 + (random.random() / 10)))  # Value ist 0-1/X höher als Weight
                 arr.append(Item(weight, value))
                 stonks = value / weight  # Effizienz der Items
                 number = i
                 items.append((weight, value, stonks, number))
+        if set == 2:
+            for c in range(clusteranzahl):
+                center_weight = random.randint(1, int(1e10))
+                center_value = random.randint(1, int(1e10))  # zufälliger Wert zwischen 1 und 10000000000
+                for i in range(int(elemente/clusteranzahl)):
+                    weight = int(center_weight * (1 + (random.random() / 10)))
+                    value = int(center_value * (1 + (random.random() / 10)))
+                    arr.append(Item(weight, value))
+                    stonks = value / weight  # Effizienz der Items
+                    number = (c*int(elemente/clusteranzahl))+i
+                    items.append((weight, value, stonks, number))
 
 
     items_create(set)
@@ -91,6 +104,9 @@ for i in range(runden):
             if item[0] + inhalt < volumen:
                 inhalt += item[0]
                 relaxierte_loesung += item[1]
+                if initierung == True:
+                    greedy = relaxierte_loesung
+                    greedy_weight = inhalt
             else:
                 if initierung == True:
                     greedy = relaxierte_loesung
@@ -225,8 +241,6 @@ for i in range(runden):
         for item in items_for_core[1:]:
             """Abbruchbedingung wenn Abstand größer als Differenz zwischen Relaxlösung und derzeitiger Core Lösung"""
             if abs(item[3]) > relaxierte_loesung - (value_feste_items + current_core_value):
-                core_end_time = time.perf_counter()
-                core_laufzeit = core_end_time - core_start_time
                 #print(f"Der Core war {len(items_in_core)} Groß")
                 break
             else:
@@ -235,15 +249,17 @@ for i in range(runden):
                     core_volumen += item[0]
                     value_feste_items -= item[1]
                 items_in_core.append(item)
-                # if len(items_in_core) > 20:
-                # print("Aua es tut so weh")
-                # value_help, items_help = knapsack_bruteforce(items_in_core, core_volumen)
                 current_core_value = pareto_knapsack(items_in_core, core_volumen)
+                if len(items_in_core) == 100:
+                    print("Alles im Core")
+        core_end_time = time.perf_counter()
+        core_laufzeit = core_end_time - core_start_time
         return value_feste_items+current_core_value, core_laufzeit
 
+    """Startinitialisierung des Baumes"""
     bestes_blatt = []
+    #print(greedy)
     bestes_blatt.append(greedy)
-    # bestes_blatt.append([])
 
     bauminit = []
     bauminit.append(0)  # Aktuelle Branch Position
@@ -255,115 +271,69 @@ for i in range(runden):
     baum.append(bauminit)
     branch_time = 0
 
-
-    # global hinzugefügt
-    # hinzugefügt = 0
-    # global gelöscht
-    # gelöscht = 0
-    # print(baum)
-
+    """Boundfunnktion um Überflüssig Knoten abzuschneiden"""
     def tom_bound(top):
-        global bound_time
         global ichs_runden
         ichs_runden += 1
-        # global gelöscht
-        bound_start_time = time.perf_counter()
-        # print(top)
         full_counter = 0
         # print(max(baum, key=lambda x: x[2])[2])
         for i in baum:
-            if i[2] <= top:
+            """Wenn Upper Bound niedriger als Lower Bound wird gecuttet"""
+            if i[2] < top:
                 baum.pop(full_counter)
                 # gelöscht +=1
             full_counter += 1
-        bound_time +=(time.perf_counter()-bound_start_time)
 
 
     def tom_branch(baumitem, top):
-        # global hinzugefügt
-        # print(baumitem)
-        # print(baumitem[0])
-        global suchen_time
+        """Das beste Item wird gewählt und auf 1 und 0 gesetzt
+        Baumitem[0] = Knotenindex
+        Baumitem[1] = Noch verfügbarer Platz
+        Baumitem[2] = Relaxlösung der Freien Objekte + Festen Objekte (Upper Bound)
+        Baumitem[3] = Wert der bereits festen Items
+        """
+        """Der Wert und das Gewicht des Aktuellen Branchpunktes werden aus Liste gezogen"""
         wert_item = items[baumitem[0]][1]
         gewicht_item = items[baumitem[0]][0]
-        # index_item = items[baumitem[0]][3]
-        # Bestes Item wird auf 0 gesetzt
-        baumitem[0] += 1
-        baumitem[2] = relax_init(items[baumitem[0]:elemente], baumitem[1], False)[1] + baumitem[3]
-        # print("2.aufrgu", baumitem)
-        if baumitem[0] != elemente - 1 and baumitem[2] > top[0]:
-            suchen_start_time = time.perf_counter()
-            baum.append(copy.deepcopy(baumitem))
-            suchen_time += (time.perf_counter() - suchen_start_time)
-            # hinzugefügt +=1
 
-        # Bestes Item wird auf 1 gesetzt
+        baumitem[0] += 1
+        """Bestes Item wird auf 0 gesetzt"""
+        baumitem[2] = relax_init(items[baumitem[0]:elemente], baumitem[1], False)[1] + baumitem[3]
+        if baumitem[0] != elemente - 1 and baumitem[2] > top[0]:
+            baum.append(copy.deepcopy(baumitem))
+
+        """Bestes Item wird auf 1 gesetzt"""
         if baumitem[1] - gewicht_item >= 0:
             baumitem[3] += wert_item
             baumitem[1] -= gewicht_item
             baumitem[2] = relax_init(items[baumitem[0]:elemente], baumitem[1], False)[1] + baumitem[3]
-            # baumitem[4].append(index_item)
-            # print("3.aufrgu", baumitem)
             if baumitem[3] > top[0]:
                 top[0] = baumitem[3]
-                # top[1] = baumitem[4]
-                # print(top)
                 tom_bound(top[0])
             if baumitem[0] != elemente - 1 and baumitem[2] > top[0]:
-                suchen_start_time = time.perf_counter()
                 baum.append(copy.deepcopy(baumitem))
-                suchen_time += (time.perf_counter() - suchen_start_time)
-                # hinzugefügt += 1
 
         return top
-        # Ein Element wird Gewählt und auf 1 und 0 gesetzt
         # TODO Branchen an gebrochener Variable
 
-
-    # print("Gewählte Items:", items_help)
-
-    # Bruteforce auf Alles. Versagt nach 25 Elementen
+    """Bruteforce auf Alles. Versagt nach 25 Elementen"""
     # best_value, best_items = knapsack_bruteforce(items_for_core, gesamt_volumen)
     # print("Bruteforce Lösung:", best_value)
     # print("Gewählte Items:", best_items)
 
 
-    # Branch and Bound auf alles
+    """Branch and Bound auf alles"""
     def BnB(bestes_blatt):
-        aua = 0
         bnb_start_time = time.perf_counter()
         while baum != []:
-            aua += 1
-            #sortiern_start_time = time.perf_counter()
             index, _ = max(enumerate(baum), key=lambda x: x[1][2])
-            #sortieren_time += (time.perf_counter() - sortiern_start_time)
-            # print(baum[index][2])
-            # print(index)
-            # print("Hier Baum Bruder", baum)
-            #suchen_start_time = time.perf_counter()
             zwischenspeicher = copy.deepcopy(baum[index])
-            # print(zwischenspeicher)
-            #suchen_time += (time.perf_counter() - suchen_start_time)
             baum.pop(index)
-            # gelöscht += 1
-            # branch_start_time = time.perf_counter()
             bestes_blatt = tom_branch(zwischenspeicher, bestes_blatt)
-            # branch_time += (time.perf_counter() - branch_start_time)
-            # print(baum)
-            # if aua%1000==0:
-            # print("Aua es tut so weh:", len(baum))
-            # print("Es wurden so viele Knoten hinzugefügt und gelöscht", hinzugefügt, gelöscht)
-            # hinzugefügt= 0
-            # gelöscht = 0
-            # print("Der beste Knoten könnte noch auf so viel kommen :", max(baum, key=lambda x: x[2])[2])
         bnb_laufzeit = time.perf_counter() - bnb_start_time
         return bestes_blatt, bnb_laufzeit
-    #print("BnB hat so viele Runden gebraucht :", aua)
-    #print("Die Branch_Bound Lösung ist: ", bestes_blatt[0])  # , "mit den Elementen:", sorted(bestes_blatt[1]))
-    #print("Die Branch_Bound Laufzeit war:", bnb_laufzeit)
-    # print("Bound hat so lange gebraucht:", bound_time)
-    #print("Das kopieren hat so lange gebraucht: ", suchen_time)
-    # print("Branch hat so lange gebraucht: ", branch_time)
+
+
 
     class Node:
         def __init__(self, level, profit, weight):
@@ -455,8 +425,8 @@ for i in range(runden):
     core_gesamtzeit += core_laufzeit
 
     # Meine BnB Funktion
-    #bestes_blatt, bnb_laufzeit = BnB(bestes_blatt)
-    #bnb_gesamtzeit += bnb_laufzeit
+    bestes_blatt, bnb_laufzeit = BnB(bestes_blatt)
+    bnb_gesamtzeit += bnb_laufzeit
 
     # Nemhauser-Ulmann auf alles
     #pareto_start_time = time.perf_counter()
@@ -464,7 +434,7 @@ for i in range(runden):
     #pareto_gesamtzeit += time.perf_counter() - pareto_start_time
 
     # Tester ob alles stimmt
-    if (core_value == max_profit ):
+    if (core_value == max_profit == bestes_blatt[0]):
         richtig += 1
 
 
@@ -485,11 +455,11 @@ for i in range(runden):
 
 print("Die Durchschnittliche Core Laufzeit war:", core_gesamtzeit/runden)
 #print("Die Durchschnittliche Nemhauser Ulmann Laufzeit war: ", pareto_gesamtzeit/runden)
-#print("Die Durchschnittliche Branch_Bound Laufzeit war:", bnb_gesamtzeit/runden)
+print("Die Durchschnittliche Branch_Bound Laufzeit war:", bnb_gesamtzeit/runden)
 print("Die Durchschnittliche Geeks Laufzeit war:", geeks_gesamtzeit/runden)
 print("Deine Erfolgsrate liegt bei ", (richtig/runden)*100, "%")
-#print("Ich hab durchschnittlich so viele Runden gebraucht:", ichs_runden/runden)
-#print("Geeks hat durchschnittlich so viele Runden gebraucht:", geeks_runden/runden)
+print("Ich hab durchschnittlich so viele Runden gebraucht:", ichs_runden/runden)
+print("Geeks hat durchschnittlich so viele Runden gebraucht:", geeks_runden/runden)
 #print("Die Durchschnittliche Ichs_relax Laufzeit war:", ichs_relaxzeit/runden)
 #print("Die Durchschnittliche Geeks_Relax Laufzeit war:", geeks_relaxzeit/runden)
 #print("Die Durchschnittliche Ichs_bound Laufzeit war:", bound_time/runden)

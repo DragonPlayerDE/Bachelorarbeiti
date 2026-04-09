@@ -13,20 +13,15 @@ class Item:
 """Rundenübergreifende Variablen"""
 core_gesamtzeit =0
 bnb_gesamtzeit = 0
+ichs2_gesamtzeit =0
 geeks_gesamtzeit =0
 pareto_gesamtzeit =0
-geeks_relaxzeit= 0
-ichs_relaxzeit=0
 geeks_runden =0
 ichs_runden =0
+ich2_runden =0
 richtig = 0
-runden = 10
-bound_time= 0
-global suchen_time
-suchen_time = 0
-global sortieren_time
-sortieren_time =0
-set = 2
+runden = 100
+set = 0
 clusteranzahl = 4 #Wenn Set == 2 relevant
 
 
@@ -88,8 +83,6 @@ for i in range(runden):
 
     """Relaxierte Lösung Selbst Programmiert"""
     def relax_init(items, volumen, initierung):
-        ichs_relax_start_time = time.perf_counter()
-        global ichs_relaxzeit
         global ichs_runden
         ichs_runden+=1
         global greedy
@@ -116,7 +109,6 @@ for i in range(runden):
                 inhalt = volumen
                 steigung_core = item[2]
                 break
-        ichs_relaxzeit+=(time.perf_counter()-ichs_relax_start_time)
         return core_item, relaxierte_loesung, steigung_core
 
 
@@ -333,21 +325,92 @@ for i in range(runden):
         bnb_laufzeit = time.perf_counter() - bnb_start_time
         return bestes_blatt, bnb_laufzeit
 
+    """Branch and Bound Klappe die 2. mit Nodes und Proirity Queue"""
+    class Toms_Node:
+        def __init__(self, level, space, profit_bound, festwert):
+            self.level = level  # Level of the node in the decision tree (or index in arr[])
+            self.space = space  # Übriger Platz nach festen Items
+            self.profit_bound = profit_bound  # Upper Bound
+            self.festwert = festwert # Wert der Festen Items
+        def __lt__(self, other):
+            return other.profit_bound < self.profit_bound  # Compare based on Upper Bound in descending order
 
+
+    def priority_bound(u, n, arr):
+        # Calculate the upper bound of profit for a node in the search tree
+        global ich2_runden
+        ich2_runden += 1
+        if u.space < 0:
+            return 0
+
+        profit_bound = u.festwert
+        j = u.level + 1
+        restspace = u.space
+        # print(j,profit_bound)
+
+        # Greedily add items to the knapsack until the weight limit is reached
+        while j < n and restspace - arr[j].weight > 0:
+            restspace -= arr[j].weight
+            profit_bound += arr[j].value
+            j += 1
+
+        # If there are still items left, calculate the fractional contribution of the next item
+        if j < n:
+            profit_bound += int(restspace * arr[j].value / arr[j].weight)
+        return profit_bound
+
+    def priority_BnB(W, arr, n, greedy):
+        # Sort items based on value-to-weight ratio in non-ascending order
+        arr.sort(key=lambda x: x.value / x.weight, reverse=True)
+
+        priority_queue = PriorityQueue()
+        u = Toms_Node(-1, W,0, 0)  # Dummy node at the starting
+        priority_queue.put(u)
+
+        max_profit = greedy
+
+        while not priority_queue.empty():
+            u = priority_queue.get()
+
+            if u.level == -1:
+                v = Toms_Node(0, W, 0, 0)  # Starting node
+            elif u.profit_bound < max_profit:
+                continue  # Skip if it is the last level (no more items to consider)
+            else:
+                v = Toms_Node(u.level + 1, u.space, u.profit_bound, u.festwert)  # Nächstes Item wird hinzugefügt
+
+            v.space -= arr[v.level].weight
+            v.festwert += arr[v.level].value
+
+            # If the cumulated weight is less than or equal to W and profit is greater than previous profit, update maxProfit
+            if v.space >= 0 and v.festwert > max_profit:
+                max_profit = v.festwert
+
+            v.profit_bound = priority_bound(v, n, arr) #TODO
+            # If the bound value is greater than current maxProfit, add the node to the priority queue for further consideration
+            if v.profit_bound > max_profit:
+                priority_queue.put(v)
+
+            # Nächstes Item wird nicht hinzugefügt
+            v = Toms_Node(u.level + 1, u.space, u.profit_bound, u.festwert)
+            v.profit_bound = priority_bound(v, n, arr) #TODO
+            # If the profit_bound value is greater than current maxProfit, add the node to the priority queue for further consideration
+            if v.profit_bound > max_profit:
+                priority_queue.put(v)
+
+        return max_profit
 
     class Node:
         def __init__(self, level, profit, weight):
             self.level = level  # Level of the node in the decision tree (or index in arr[])
             self.profit = profit  # Profit of nodes on the path from root to this node (including this node)
-            self.weight = weight  # Total weight at the node
+            self.weight = weight  # Total weight at the node(Nur Feste Items)
 
         def __lt__(self, other):
             return other.weight < self.weight  # Compare based on weight in descending order
 
 
     def bound(u, n, W, arr):
-        geeks_relax_start_time = time.perf_counter()
-        global geeks_relaxzeit
         # Calculate the upper bound of profit for a node in the search tree
         global geeks_runden
         geeks_runden+=1
@@ -357,6 +420,7 @@ for i in range(runden):
         profit_bound = u.profit
         j = u.level + 1
         total_weight = u.weight
+        #print(j,profit_bound)
 
         # Greedily add items to the knapsack until the weight limit is reached
         while j < n and total_weight + arr[j].weight <= W:
@@ -367,7 +431,6 @@ for i in range(runden):
         # If there are still items left, calculate the fractional contribution of the next item
         if j < n:
             profit_bound += int((W - total_weight) * arr[j].value / arr[j].weight)
-        geeks_relaxzeit+=(time.perf_counter()-geeks_relax_start_time)
         return profit_bound
 
 
@@ -416,17 +479,22 @@ for i in range(runden):
     # Geeks Branch and Bound Funktion
     W = gesamt_volumen
     n = len(arr)
-    geeks_start_time = time.perf_counter()
-    max_profit = knapsack(W, arr, n)
-    geeks_gesamtzeit += (time.perf_counter()-geeks_start_time)
+    #geeks_start_time = time.perf_counter()
+    #max_profit = knapsack(W, arr, n)
+    #geeks_gesamtzeit += (time.perf_counter()-geeks_start_time)
+
+    #Meine 2. BnB Version mit Nodes und Proirity Queue
+    ichs2_start_time = time.perf_counter()
+    mein_max_profit = priority_BnB(W, arr, n, greedy)
+    ichs2_gesamtzeit += (time.perf_counter()-ichs2_start_time)
 
     #Core Funktion
     core_value, core_laufzeit = core(gesamt_volumen, items_for_core)
     core_gesamtzeit += core_laufzeit
 
     # Meine BnB Funktion
-    bestes_blatt, bnb_laufzeit = BnB(bestes_blatt)
-    bnb_gesamtzeit += bnb_laufzeit
+    #bestes_blatt, bnb_laufzeit = BnB(bestes_blatt)
+    #bnb_gesamtzeit += bnb_laufzeit
 
     # Nemhauser-Ulmann auf alles
     #pareto_start_time = time.perf_counter()
@@ -434,34 +502,32 @@ for i in range(runden):
     #pareto_gesamtzeit += time.perf_counter() - pareto_start_time
 
     # Tester ob alles stimmt
-    if (core_value == max_profit == bestes_blatt[0]):
+    if (core_value == mein_max_profit):
         richtig += 1
 
-
+    """
     if (max_profit < core_value):
         print(f"Core zu groß: {max_profit} < {core_value}")
         if max_profit ==0:
             print(items)
             print(min(enumerate(items), key=lambda x: x[0]))
-        """for items in items_for_core:
-            print(abs(items[3]))"""
+        for items in items_for_core:
+            print(abs(items[3]))
 
     if (max_profit > core_value):
         print(f"Core zu klein: {max_profit} > {core_value}")
-        """for items in items_for_core:
-            print(abs(items[3]))"""
+        for items in items_for_core:
+            print(abs(items[3]))
+    """
 
 
 
 print("Die Durchschnittliche Core Laufzeit war:", core_gesamtzeit/runden)
 #print("Die Durchschnittliche Nemhauser Ulmann Laufzeit war: ", pareto_gesamtzeit/runden)
-print("Die Durchschnittliche Branch_Bound Laufzeit war:", bnb_gesamtzeit/runden)
-print("Die Durchschnittliche Geeks Laufzeit war:", geeks_gesamtzeit/runden)
+#print("Die Durchschnittliche Branch_Bound Laufzeit war:", bnb_gesamtzeit/runden)
+#print("Die Durchschnittliche Geeks BnB Laufzeit war:", geeks_gesamtzeit/runden)
+print("Die Durchschnittliche Priority BnB Laufzeit war:", ichs2_gesamtzeit/runden)
 print("Deine Erfolgsrate liegt bei ", (richtig/runden)*100, "%")
-print("Ich hab durchschnittlich so viele Runden gebraucht:", ichs_runden/runden)
-print("Geeks hat durchschnittlich so viele Runden gebraucht:", geeks_runden/runden)
-#print("Die Durchschnittliche Ichs_relax Laufzeit war:", ichs_relaxzeit/runden)
-#print("Die Durchschnittliche Geeks_Relax Laufzeit war:", geeks_relaxzeit/runden)
-#print("Die Durchschnittliche Ichs_bound Laufzeit war:", bound_time/runden)
-#print("Das Kopieren hat durchschnittlich so lange geadauert:", suchen_time/runden)
-#print("Das suchen des näächsten Elements dauert:", sortieren_time/runden)
+#print("Ich hab durchschnittlich so viele Runden gebraucht:", ichs_runden/runden)
+print("Priority BnB hat durchschnittlich so viele Runden gebraucht:", ich2_runden/runden)
+#print("Geeks hat durchschnittlich so viele Runden gebraucht:", geeks_runden/runden)

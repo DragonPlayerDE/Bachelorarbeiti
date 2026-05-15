@@ -26,6 +26,9 @@ for f in range (3):
     ichs2_gesamtzeit = 0
     geeks_gesamtzeit = 0
     pareto_gesamtzeit = 0
+    global geeks_start_time
+    global ichs2_start_time
+    global core
     geeks_runden = 0
     ichs_runden = 0
     ich2_runden = 0
@@ -33,7 +36,9 @@ for f in range (3):
     runden = 100
     set = 0
     clusteranzahl = 4  # Wenn Set == 2 relevant
-
+    if ((f==2 or f==1) and (set == 1 or set == 2)):
+        runden = 10
+        #print("Ja wir haben Runden auf 1o gesetzt")
     """Anzahl Runden wird festgelegt und Array initialisiert"""
     for i in range(runden):
         print(i)
@@ -65,6 +70,7 @@ for f in range (3):
                     number = i
                     items.append((weight, value, stonks, number))
             if set == 2:
+
                 for c in range(clusteranzahl):
                     center_weight = random.randint(1, int(1e10))
                     center_value = random.randint(1, int(1e10))  # zufälliger Wert zwischen 1 und 10000000000
@@ -272,8 +278,11 @@ for f in range (3):
                     current_core_value = pareto_knapsack(items_in_core, core_volumen)
                     if len(items_in_core) == 100:
                         print("Alles im Core")
-            core_end_time = time.perf_counter()
-            core_laufzeit = core_end_time - core_start_time
+                    if (time.perf_counter() - core_start_time > 60):
+                        print("Core Abbruch")
+                        core_laufzeit = time.perf_counter() - core_start_time
+                        return value_feste_items + current_core_value, core_laufzeit
+            core_laufzeit = time.perf_counter() - core_start_time
             return value_feste_items + current_core_value, core_laufzeit
 
 
@@ -398,6 +407,7 @@ for f in range (3):
 
 
         def priority_BnB(W, arr, n, greedy):
+            priority_abbruch_runden =0
             # Sort items based on value-to-weight ratio in non-ascending order
             arr.sort(key=lambda x: x.value / x.weight, reverse=True)
 
@@ -435,7 +445,9 @@ for f in range (3):
                 # If the profit_bound value is greater than current maxProfit, add the node to the priority queue for further consideration
                 if v.profit_bound > max_profit:
                     priority_queue.put(v)
-
+                if(time.perf_counter()-ichs2_start_time > 60):
+                    print("Priority Abbruch")
+                    return max_profit
             return max_profit
 
 
@@ -512,6 +524,10 @@ for f in range (3):
                 if v_bound > max_profit:
                     priority_queue.put(v)
 
+                if (time.perf_counter() - geeks_start_time > 60):
+                    print("Geek Abbruch")
+                    return max_profit
+
             return max_profit
 
 
@@ -541,7 +557,7 @@ for f in range (3):
         # pareto_gesamtzeit += time.perf_counter() - pareto_start_time
 
         # Tester ob alles stimmt
-        if (core_value == mein_max_profit):
+        if (core_value == mein_max_profit == max_profit):
             richtig += 1
 
         """
@@ -599,7 +615,12 @@ plt.xlabel('Anzahl Elemente')
 # naming the y axis
 plt.ylabel('Durchschnittliche Dauer pro Runde')
 # giving a title to my graph
-plt.title('Gleichverteiltes Set')
+if (set==0):
+    plt.title('Gleichverteiltes Set')
+elif (set==1):
+    plt.title('Ähnliches Verhältnis Gewicht und Wert')
+elif (set==2):
+    plt.title("Cluster")
 
 # show a legend on the plot
 plt.legend()

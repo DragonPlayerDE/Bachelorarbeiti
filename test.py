@@ -33,12 +33,12 @@ for f in range (3):
     ichs_runden = 0
     ich2_runden = 0
     richtig = 0
+    abbruch_zeit = 300 #Zeit bis die Algoryths Abbrechen
     runden = 100
-    set = 0
-    clusteranzahl = 4  # Wenn Set == 2 relevant
+    set = 2
+    clusteranzahl = 2  # Wenn Set == 2 relevant
     if ((f==2 or f==1) and (set == 1 or set == 2)):
         runden = 10
-        #print("Ja wir haben Runden auf 1o gesetzt")
     """Anzahl Runden wird festgelegt und Array initialisiert"""
     for i in range(runden):
         print(i)
@@ -72,11 +72,13 @@ for f in range (3):
             if set == 2:
 
                 for c in range(clusteranzahl):
-                    center_weight = random.randint(1, int(1e10))
-                    center_value = random.randint(1, int(1e10))  # zufälliger Wert zwischen 1 und 10000000000
+                    center_weight = random.randint(int(1e9), int(1e10))
+                    center_value = random.randint(int(1e9), int(1e10))  # zufälliger Wert zwischen 1 und 10000000000
                     for i in range(int(elemente / clusteranzahl)):
-                        weight = int(center_weight * (1 + (random.random() / 10)))
-                        value = int(center_value * (1 + (random.random() / 10)))
+                        lor = random.choice([1, -1])
+                        weight = center_weight + (lor * random.randint(1, int(1e9)))
+                        hol = random.choice([1, -1])
+                        value = center_value + (hol * random.randint(1, int(1e9)))
                         arr.append(Item(weight, value))
                         stonks = value / weight  # Effizienz der Items
                         number = (c * int(elemente / clusteranzahl)) + i
@@ -84,6 +86,21 @@ for f in range (3):
 
 
         items_create(set)
+
+        if i ==1:
+            x = [item[0] for item in items]
+            y = [item[1] for item in items]
+            plt.xlabel("Gewicht")
+            plt.ylabel("Wert")
+            if (set == 0):
+                plt.title('Gleichverteiltes Set')
+            elif (set == 1):
+                plt.title('Ähnliches Verhältnis Gewicht und Wert')
+            elif (set == 2):
+                plt.title((clusteranzahl , 'Cluster'))
+            plt.scatter(x, y)
+            plt.axis("equal")
+            plt.show()
 
         """Ausgabe der ersten 10 zur Kontrolle"""
         # for item in items[:10]:
@@ -276,9 +293,9 @@ for f in range (3):
                         value_feste_items -= item[1]
                     items_in_core.append(item)
                     current_core_value = pareto_knapsack(items_in_core, core_volumen)
-                    if len(items_in_core) == 100:
-                        print("Alles im Core")
-                    if (time.perf_counter() - core_start_time > 60):
+                    #if len(items_in_core) == 100:
+                    #    print("Alles im Core")
+                    if (time.perf_counter() - core_start_time > abbruch_zeit):
                         print("Core Abbruch")
                         core_laufzeit = time.perf_counter() - core_start_time
                         return value_feste_items + current_core_value, core_laufzeit
@@ -407,7 +424,6 @@ for f in range (3):
 
 
         def priority_BnB(W, arr, n, greedy):
-            priority_abbruch_runden =0
             # Sort items based on value-to-weight ratio in non-ascending order
             arr.sort(key=lambda x: x.value / x.weight, reverse=True)
 
@@ -445,7 +461,7 @@ for f in range (3):
                 # If the profit_bound value is greater than current maxProfit, add the node to the priority queue for further consideration
                 if v.profit_bound > max_profit:
                     priority_queue.put(v)
-                if(time.perf_counter()-ichs2_start_time > 60):
+                if(time.perf_counter()-ichs2_start_time > abbruch_zeit):
                     print("Priority Abbruch")
                     return max_profit
             return max_profit
@@ -524,7 +540,7 @@ for f in range (3):
                 if v_bound > max_profit:
                     priority_queue.put(v)
 
-                if (time.perf_counter() - geeks_start_time > 60):
+                if (time.perf_counter() - geeks_start_time > abbruch_zeit):
                     print("Geek Abbruch")
                     return max_profit
 
@@ -620,7 +636,7 @@ if (set==0):
 elif (set==1):
     plt.title('Ähnliches Verhältnis Gewicht und Wert')
 elif (set==2):
-    plt.title("Cluster")
+    plt.title((clusteranzahl , 'Cluster'))
 
 # show a legend on the plot
 plt.legend()

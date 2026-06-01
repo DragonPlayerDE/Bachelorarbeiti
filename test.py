@@ -15,9 +15,10 @@ class Item:
         self.weight = weight
         self.value = value
 """Setübergreifende Variablen"""
-core_werte =[0,0,0]
-pbnb_werte =[0,0,0]
-bnb_werte =[0,0,0]
+core_werte =[]
+pbnb_werte =[]
+bnb_werte =[]
+setsize=[]
 
 for f in range (3):
     """Rundenübergreifende Variablen"""
@@ -29,13 +30,14 @@ for f in range (3):
     global geeks_start_time
     global ichs2_start_time
     global core
+    core_pareto = 0
     geeks_runden = 0
     ichs_runden = 0
     ich2_runden = 0
     richtig = 0
     abbruch_zeit = 300 #Zeit bis die Algoryths Abbrechen
     runden = 100
-    set = 2
+    set = 0
     clusteranzahl = 2  # Wenn Set == 2 relevant
     if ((f==2 or f==1) and (set == 1 or set == 2)):
         runden = 10
@@ -231,6 +233,7 @@ for f in range (3):
 
 
         def pareto_knapsack(items, max_weight):
+            global core_pareto
             """
             items: Liste von (gewicht, wert, indexnummer)
             max_weight: Maximales Volumen/Gewicht des Rucksacks
@@ -246,12 +249,13 @@ for f in range (3):
 
                 for pw, pv in pareto:
                     nw, nv = pw + w, pv + v
+                    core_pareto +=1
                     if nw <= max_weight:
                         neue_lösungen.append((nw, nv))
 
                 pareto += neue_lösungen
                 pareto = pareto_filter(pareto)
-
+                #core_pareto += pareto.__len__()
             # beste Lösung (maximaler Wert)
             return max(pareto, key=lambda x: x[1])[1]
 
@@ -413,6 +417,7 @@ for f in range (3):
 
             # Greedily add items to the knapsack until the weight limit is reached
             while j < n and restspace - arr[j].weight > 0:
+                ich2_runden += 1
                 restspace -= arr[j].weight
                 profit_bound += arr[j].value
                 j += 1
@@ -439,7 +444,7 @@ for f in range (3):
                 if u.level == -1:
                     v = Toms_Node(0, W, 0, 0)  # Starting node
                 elif u.profit_bound < max_profit:
-                    continue  # Skip if it is the last level (no more items to consider)
+                    continue  # Skip if best upper Bound < best Lower Bound
                 else:
                     v = Toms_Node(u.level + 1, u.space, u.profit_bound, u.festwert)  # Nächstes Item wird hinzugefügt
 
@@ -450,14 +455,14 @@ for f in range (3):
                 if v.space >= 0 and v.festwert > max_profit:
                     max_profit = v.festwert
 
-                v.profit_bound = priority_bound(v, n, arr)  # TODO
+                v.profit_bound = priority_bound(v, n, arr)
                 # If the bound value is greater than current maxProfit, add the node to the priority queue for further consideration
                 if v.profit_bound > max_profit:
                     priority_queue.put(v)
 
                 # Nächstes Item wird nicht hinzugefügt
                 v = Toms_Node(u.level + 1, u.space, u.profit_bound, u.festwert)
-                v.profit_bound = priority_bound(v, n, arr)  # TODO
+                v.profit_bound = priority_bound(v, n, arr)
                 # If the profit_bound value is greater than current maxProfit, add the node to the priority queue for further consideration
                 if v.profit_bound > max_profit:
                     priority_queue.put(v)
@@ -550,9 +555,9 @@ for f in range (3):
         # Geeks Branch and Bound Funktion
         W = gesamt_volumen
         n = len(arr)
-        geeks_start_time = time.perf_counter()
-        max_profit = knapsack(W, arr, n)
-        geeks_gesamtzeit += (time.perf_counter()-geeks_start_time)
+        #geeks_start_time = time.perf_counter()
+        #max_profit = knapsack(W, arr, n)
+        #geeks_gesamtzeit += (time.perf_counter()-geeks_start_time)
 
         # Meine 2. BnB Version mit Nodes und Proirity Queue
         ichs2_start_time = time.perf_counter()
@@ -573,7 +578,8 @@ for f in range (3):
         # pareto_gesamtzeit += time.perf_counter() - pareto_start_time
 
         # Tester ob alles stimmt
-        if (core_value == mein_max_profit == max_profit):
+        if (core_value == mein_max_profit ):
+            #== max_profit
             richtig += 1
 
         """
@@ -594,15 +600,16 @@ for f in range (3):
     print("Die Durchschnittliche Core Laufzeit war:", core_gesamtzeit / runden)
     # print("Die Durchschnittliche Nemhauser Ulmann Laufzeit war: ", pareto_gesamtzeit/runden)
     # print("Die Durchschnittliche Branch_Bound Laufzeit war:", bnb_gesamtzeit/runden)
-    print("Die Durchschnittliche Geeks BnB Laufzeit war:", geeks_gesamtzeit/runden)
+    #print("Die Durchschnittliche Geeks BnB Laufzeit war:", geeks_gesamtzeit/runden)
     print("Die Durchschnittliche Priority BnB Laufzeit war:", ichs2_gesamtzeit / runden)
     print("Deine Erfolgsrate liegt bei ", (richtig / runden) * 100, "%")
     # print("Ich hab durchschnittlich so viele Runden gebraucht:", ichs_runden/runden)
     print("Priority BnB hat durchschnittlich so viele Runden gebraucht:", ich2_runden / runden)
-    print("Geeks hat durchschnittlich so viele Runden gebraucht:", geeks_runden/runden)
-    core_werte[f]=core_gesamtzeit/runden
-    pbnb_werte[f]=ichs2_gesamtzeit/runden
-    bnb_werte[f]= geeks_gesamtzeit/runden
+    #print("Geeks hat durchschnittlich so viele Runden gebraucht:", geeks_runden/runden)
+    print("Core hat Durchschnittlich soviele Pareto Lösungen produziert:", core_pareto/runden)
+    core_werte.append(core_gesamtzeit/runden)
+    pbnb_werte.append(ichs2_gesamtzeit/runden)
+    bnb_werte.append(geeks_gesamtzeit/runden)
 
 # line 1 points
 x1 = [10,100,1000]

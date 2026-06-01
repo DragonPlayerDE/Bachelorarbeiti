@@ -18,9 +18,9 @@ class Item:
 core_werte =[]
 pbnb_werte =[]
 bnb_werte =[]
-setsize=[]
+setsize=[10,18,32,57,100,179, 316, 566, 1000]
 
-for f in range (3):
+for f in setsize:
     """Rundenübergreifende Variablen"""
     core_gesamtzeit = 0
     bnb_gesamtzeit = 0
@@ -36,8 +36,9 @@ for f in range (3):
     ich2_runden = 0
     richtig = 0
     abbruch_zeit = 300 #Zeit bis die Algoryths Abbrechen
+    setprint = False #sollen wa das Set drucken
     runden = 100
-    set = 0
+    set = 1
     clusteranzahl = 2  # Wenn Set == 2 relevant
     if ((f==2 or f==1) and (set == 1 or set == 2)):
         runden = 10
@@ -45,8 +46,8 @@ for f in range (3):
     for i in range(runden):
         print(i)
         items = []
-        elemente = 10*(10**f)
-        gesamt_volumen = int(4 * 1e10*(10**f))
+        elemente = f
+        gesamt_volumen = int(4 * 1e9*f)
         arr = []
 
         """Die Items werden zufällig erstellt"""
@@ -89,7 +90,7 @@ for f in range (3):
 
         items_create(set)
 
-        if i ==1:
+        if (i ==1 and setprint == True):
             x = [item[0] for item in items]
             y = [item[1] for item in items]
             plt.xlabel("Gewicht")
@@ -612,22 +613,22 @@ for f in range (3):
     bnb_werte.append(geeks_gesamtzeit/runden)
 
 # line 1 points
-x1 = [10,100,1000]
-y1 = [core_werte[0],core_werte[1],core_werte[2]]
+x1 = setsize
+y1 = core_werte
 # plotting the line 1 points
 plt.plot(x1, y1, label = "Core")
 
 # line 2 points
-x2 = [10,100,1000]
-y2 = [pbnb_werte[0],pbnb_werte[1],pbnb_werte[2]]
+x2 = setsize
+y2 = pbnb_werte
 # plotting the line 2 points
-plt.plot(x2, y2, label = "P-BnB")
+plt.plot(x2, y2, label = "BnB")
 
 # line 3 points
-x2 = [10,100,1000]
-y2 = [bnb_werte[0],bnb_werte[1],bnb_werte[2]]
-# plotting the line 2 points
-plt.plot(x2, y2, label = "Geek-BnB")
+#x2 = setsize
+#y2 = bnb_werte
+# plotting the line 3 points
+#plt.plot(x2, y2, label = "Geek-BnB")
 
 #scaling the axis log
 plt.xscale('log')

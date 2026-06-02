@@ -16,6 +16,7 @@ class Item:
         self.value = value
 """Setübergreifende Variablen"""
 core_werte =[]
+full_core_werte =[]
 pbnb_werte =[]
 bnb_werte =[]
 setsize=[10,18,32,57,100,179, 316, 566, 1000]
@@ -23,6 +24,7 @@ setsize=[10,18,32,57,100,179, 316, 566, 1000]
 for f in setsize:
     """Rundenübergreifende Variablen"""
     core_gesamtzeit = 0
+    full_core_gesamtzeit = 0
     bnb_gesamtzeit = 0
     ichs2_gesamtzeit = 0
     geeks_gesamtzeit = 0
@@ -37,11 +39,10 @@ for f in setsize:
     richtig = 0
     abbruch_zeit = 300 #Zeit bis die Algoryths Abbrechen
     setprint = False #sollen wa das Set drucken
-    runden = 100
+    runden = 10
     set = 1
     clusteranzahl = 2  # Wenn Set == 2 relevant
-    if ((f==2 or f==1) and (set == 1 or set == 2)):
-        runden = 10
+    spread = 1e9 # Wenn Set == 3 relevant
     """Anzahl Runden wird festgelegt und Array initialisiert"""
     for i in range(runden):
         print(i)
@@ -67,7 +68,7 @@ for f in setsize:
                 """Value Wert knapp über Weight Wert"""
                 for i in range(elemente):
                     weight = random.randint(1, int(1e10))  # zufälliges Gewicht
-                    value = int(weight * (1 + (random.random() / 10)))  # Value ist 0-1/X höher als Weight
+                    value = weight+random.randint(1, int(2*1e9))  # Value ist X% höher als maximal Gewicht
                     arr.append(Item(weight, value))
                     stonks = value / weight  # Effizienz der Items
                     number = i
@@ -78,14 +79,38 @@ for f in setsize:
                     center_weight = random.randint(int(1e9), int(1e10))
                     center_value = random.randint(int(1e9), int(1e10))  # zufälliger Wert zwischen 1 und 10000000000
                     for i in range(int(elemente / clusteranzahl)):
-                        lor = random.choice([1, -1])
+                        lor = random.choice([1, -1]) # Left or Right
                         weight = center_weight + (lor * random.randint(1, int(1e9)))
-                        hol = random.choice([1, -1])
+                        hol = random.choice([1, -1]) #Highter or Lower
                         value = center_value + (hol * random.randint(1, int(1e9)))
                         arr.append(Item(weight, value))
                         stonks = value / weight  # Effizienz der Items
                         number = (c * int(elemente / clusteranzahl)) + i
                         items.append((weight, value, stonks, number))
+
+            if set == 3:
+                # Erster Punkt völlig zufällig
+                weight = random.randint(1, int(1e10))  # zufälliges Gewicht
+                value = random.randint(1, int(1e10))  # zufälliger Wert zwischen 1 und 10000000000
+                arr.append(Item(weight, value))
+                stonks = value / weight  # Effizienz der Items
+                number = 0
+                items.append((weight, value, stonks, number))
+                for i in range(elemente-1):
+                    # Existierenden Punkt auswählen
+                    base_weight, base_value, x,y = random.choice(items)
+
+                    # Leichte Abweichung
+                    new_weight = base_weight + random.uniform(-spread, spread)
+                    new_value = base_weight + random.uniform(-spread, spread)
+                    # Nicht Negativ
+                    new_weight = max(1, new_weight)
+                    new_value = max(1, new_value)
+                    arr.append(Item(new_weight, new_value))
+                    stonks = new_value / new_weight  # Effizienz der Items
+                    number = i+1
+                    items.append((new_weight, new_value, stonks, number))
+
 
 
         items_create(set)
@@ -101,6 +126,8 @@ for f in setsize:
                 plt.title('Ähnliches Verhältnis Gewicht und Wert')
             elif (set == 2):
                 plt.title((clusteranzahl , 'Cluster'))
+            elif (set == 3):
+                plt.title("Random Cluster")
             plt.scatter(x, y)
             plt.axis("equal")
             plt.show()
@@ -260,6 +287,28 @@ for f in setsize:
             # beste Lösung (maximaler Wert)
             return max(pareto, key=lambda x: x[1])[1]
 
+        def pareto_knapsack_full(item, pareto, core_volumen):
+            global core_pareto
+            global gesamt_volumen
+            neue_lösungen = []
+            max = 0
+
+            for pw, pv in pareto:
+                nw, nv = pw + item[0], pv + item[1]
+                core_pareto += 1
+                if nw <= gesamt_volumen:
+                    neue_lösungen.append((nw, nv))
+
+            pareto += neue_lösungen
+            pareto = pareto_filter(pareto)
+                # core_pareto += pareto.__len__()
+            # beste Lösung (maximaler Wert)
+            for pw, pv in pareto:
+                if pw > core_volumen:
+                    break
+                max = pv
+
+            return max, pareto
 
         def pareto_filter(solutions: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
             """
@@ -277,7 +326,7 @@ for f in setsize:
             return pareto
 
 
-        def core(gesamt_volumen, items_for_core):
+        def core(gesamt_volumen, items_for_core, full):
             # Start Initialisirung vom Core Rucksack
             core_start_time = time.perf_counter()
             core_volumen = gesamt_volumen - greedy_weight
@@ -285,6 +334,9 @@ for f in setsize:
             items_in_core = []
             items_in_core.append(items_for_core[0])
             current_core_value = 0
+            if full == True:
+                pareto=[(0,0)]
+                pareto.append((items_in_core[0][0],items_in_core[0][1]))
 
             for item in items_for_core[1:]:
                 """Abbruchbedingung wenn Abstand größer als Differenz zwischen Relaxlösung und derzeitiger Core Lösung"""
@@ -297,7 +349,10 @@ for f in setsize:
                         core_volumen += item[0]
                         value_feste_items -= item[1]
                     items_in_core.append(item)
-                    current_core_value = pareto_knapsack(items_in_core, core_volumen)
+                    if full == True:
+                        current_core_value, pareto = pareto_knapsack_full(item, pareto, core_volumen)
+                    if full == False:
+                        current_core_value = pareto_knapsack(items_in_core, core_volumen)
                     #if len(items_in_core) == 100:
                     #    print("Alles im Core")
                     if (time.perf_counter() - core_start_time > abbruch_zeit):
@@ -566,8 +621,13 @@ for f in setsize:
         ichs2_gesamtzeit += (time.perf_counter() - ichs2_start_time)
 
         # Core Funktion
-        core_value, core_laufzeit = core(gesamt_volumen, items_for_core)
-        core_gesamtzeit += core_laufzeit
+        #core_value, core_laufzeit = core(gesamt_volumen, items_for_core, False)
+        #core_gesamtzeit += core_laufzeit
+
+        # Full Core Funktion
+        full_core_value, core_laufzeit = core(gesamt_volumen, items_for_core, True)
+        full_core_gesamtzeit += core_laufzeit
+
 
         # Meine BnB Funktion
         # bestes_blatt, bnb_laufzeit = BnB(bestes_blatt)
@@ -579,8 +639,8 @@ for f in setsize:
         # pareto_gesamtzeit += time.perf_counter() - pareto_start_time
 
         # Tester ob alles stimmt
-        if (core_value == mein_max_profit ):
-            #== max_profit
+        if (mein_max_profit == full_core_value ):
+            #core_value == == max_profit
             richtig += 1
 
         """
@@ -598,7 +658,8 @@ for f in setsize:
                 print(abs(items[3]))
         """
 
-    print("Die Durchschnittliche Core Laufzeit war:", core_gesamtzeit / runden)
+    #print("Die Durchschnittliche Core Laufzeit war:", core_gesamtzeit / runden)
+    print("Die Durchschnittliche Full_Core Laufzeit war:", full_core_gesamtzeit / runden)
     # print("Die Durchschnittliche Nemhauser Ulmann Laufzeit war: ", pareto_gesamtzeit/runden)
     # print("Die Durchschnittliche Branch_Bound Laufzeit war:", bnb_gesamtzeit/runden)
     #print("Die Durchschnittliche Geeks BnB Laufzeit war:", geeks_gesamtzeit/runden)
@@ -609,12 +670,19 @@ for f in setsize:
     #print("Geeks hat durchschnittlich so viele Runden gebraucht:", geeks_runden/runden)
     print("Core hat Durchschnittlich soviele Pareto Lösungen produziert:", core_pareto/runden)
     core_werte.append(core_gesamtzeit/runden)
+    full_core_werte.append(full_core_gesamtzeit/runden)
     pbnb_werte.append(ichs2_gesamtzeit/runden)
     bnb_werte.append(geeks_gesamtzeit/runden)
 
 # line 1 points
+#x1 = setsize
+#y1 = core_werte
+# plotting the line 1 points
+#plt.plot(x1, y1, label = "Core")
+
+# line 1.5 points
 x1 = setsize
-y1 = core_werte
+y1 = full_core_werte
 # plotting the line 1 points
 plt.plot(x1, y1, label = "Core")
 
@@ -624,7 +692,7 @@ y2 = pbnb_werte
 # plotting the line 2 points
 plt.plot(x2, y2, label = "BnB")
 
-# line 3 points
+# line 2.5 points
 #x2 = setsize
 #y2 = bnb_werte
 # plotting the line 3 points

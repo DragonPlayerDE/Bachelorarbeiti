@@ -18,6 +18,7 @@ class Item:
 core_werte =[]
 full_core_werte =[]
 pbnb_werte =[]
+pbnb_half_werte =[]
 bnb_werte =[]
 setsize=[10,18,32,57,100,179, 316, 566, 1000]
 
@@ -27,6 +28,7 @@ for f in setsize:
     full_core_gesamtzeit = 0
     bnb_gesamtzeit = 0
     ichs2_gesamtzeit = 0
+    ichs3_gesamtzeit = 0
     geeks_gesamtzeit = 0
     pareto_gesamtzeit = 0
     global geeks_start_time
@@ -39,7 +41,7 @@ for f in setsize:
     richtig = 0
     abbruch_zeit = 300 #Zeit bis die Algoryths Abbrechen
     setprint = False #sollen wa das Set drucken
-    runden = 10
+    runden = 100
     set = 1
     clusteranzahl = 2  # Wenn Set == 2 relevant
     spread = 1e9 # Wenn Set == 3 relevant
@@ -68,7 +70,7 @@ for f in setsize:
                 """Value Wert knapp über Weight Wert"""
                 for i in range(elemente):
                     weight = random.randint(1, int(1e10))  # zufälliges Gewicht
-                    value = weight+random.randint(1, int(2*1e9))  # Value ist X% höher als maximal Gewicht
+                    value = weight+random.randint(1, int(4*1e9))  # Value ist X% höher als maximal Gewicht
                     arr.append(Item(weight, value))
                     stonks = value / weight  # Effizienz der Items
                     number = i
@@ -462,7 +464,6 @@ for f in setsize:
         def priority_bound(u, n, arr):
             # Calculate the upper bound of profit for a node in the search tree
             global ich2_runden
-            ich2_runden += 1
             if u.space < 0:
                 return 0
 
@@ -472,7 +473,7 @@ for f in setsize:
             # print(j,profit_bound)
 
             # Greedily add items to the knapsack until the weight limit is reached
-            while j < n and restspace - arr[j].weight > 0:
+            while j < n and restspace >= arr[j].weight:
                 ich2_runden += 1
                 restspace -= arr[j].weight
                 profit_bound += arr[j].value
@@ -484,7 +485,7 @@ for f in setsize:
             return profit_bound
 
 
-        def priority_BnB(W, arr, n, greedy):
+        def priority_BnB(W, arr, n, greedy,half):
             # Sort items based on value-to-weight ratio in non-ascending order
             arr.sort(key=lambda x: x.value / x.weight, reverse=True)
 
@@ -498,7 +499,7 @@ for f in setsize:
                 u = priority_queue.get()
 
                 if u.level == -1:
-                    v = Toms_Node(0, W, 0, 0)  # Starting node
+                    v = Toms_Node(0, W, int(relaxierte_loesung), 0)  # Starting node
                 elif u.profit_bound < max_profit:
                     continue  # Skip if best upper Bound < best Lower Bound
                 else:
@@ -511,9 +512,12 @@ for f in setsize:
                 if v.space >= 0 and v.festwert > max_profit:
                     max_profit = v.festwert
 
-                v.profit_bound = priority_bound(v, n, arr)
+                if half == False:
+                    v.profit_bound = priority_bound(v, n, arr)
+
+
                 # If the bound value is greater than current maxProfit, add the node to the priority queue for further consideration
-                if v.profit_bound > max_profit:
+                if v.profit_bound > max_profit and v.space >0:
                     priority_queue.put(v)
 
                 # Nächstes Item wird nicht hinzugefügt
@@ -522,7 +526,7 @@ for f in setsize:
                 # If the profit_bound value is greater than current maxProfit, add the node to the priority queue for further consideration
                 if v.profit_bound > max_profit:
                     priority_queue.put(v)
-                if(time.perf_counter()-ichs2_start_time > abbruch_zeit):
+                if(time.perf_counter()-ichs3_start_time > abbruch_zeit):
                     print("Priority Abbruch")
                     return max_profit
             return max_profit
@@ -616,9 +620,14 @@ for f in setsize:
         #geeks_gesamtzeit += (time.perf_counter()-geeks_start_time)
 
         # Meine 2. BnB Version mit Nodes und Proirity Queue
-        ichs2_start_time = time.perf_counter()
-        mein_max_profit = priority_BnB(W, arr, n, greedy)
-        ichs2_gesamtzeit += (time.perf_counter() - ichs2_start_time)
+        #ichs2_start_time = time.perf_counter()
+        #mein_max_profit = priority_BnB(W, arr, n, greedy,False)
+        #ichs2_gesamtzeit += (time.perf_counter() - ichs2_start_time)
+
+        # Meine 3. BnB Version mit Nodes und Proirity Queue die Sortierung besser nutzt
+        ichs3_start_time = time.perf_counter()
+        mein_2_max_profit = priority_BnB(W, arr, n, greedy,True)
+        ichs3_gesamtzeit += (time.perf_counter() - ichs3_start_time)
 
         # Core Funktion
         #core_value, core_laufzeit = core(gesamt_volumen, items_for_core, False)
@@ -639,8 +648,8 @@ for f in setsize:
         # pareto_gesamtzeit += time.perf_counter() - pareto_start_time
 
         # Tester ob alles stimmt
-        if (mein_max_profit == full_core_value ):
-            #core_value == == max_profit
+        if ( full_core_value ==mein_2_max_profit ):
+            #core_value == mein_max_profit == == max_profit
             richtig += 1
 
         """
@@ -663,15 +672,17 @@ for f in setsize:
     # print("Die Durchschnittliche Nemhauser Ulmann Laufzeit war: ", pareto_gesamtzeit/runden)
     # print("Die Durchschnittliche Branch_Bound Laufzeit war:", bnb_gesamtzeit/runden)
     #print("Die Durchschnittliche Geeks BnB Laufzeit war:", geeks_gesamtzeit/runden)
-    print("Die Durchschnittliche Priority BnB Laufzeit war:", ichs2_gesamtzeit / runden)
+    #print("Die Durchschnittliche Priority BnB Laufzeit war:", ichs2_gesamtzeit / runden)
+    print("Die Durchschnittliche Priority BnB Laufzeit war:", ichs3_gesamtzeit / runden)
     print("Deine Erfolgsrate liegt bei ", (richtig / runden) * 100, "%")
     # print("Ich hab durchschnittlich so viele Runden gebraucht:", ichs_runden/runden)
     print("Priority BnB hat durchschnittlich so viele Runden gebraucht:", ich2_runden / runden)
     #print("Geeks hat durchschnittlich so viele Runden gebraucht:", geeks_runden/runden)
     print("Core hat Durchschnittlich soviele Pareto Lösungen produziert:", core_pareto/runden)
-    core_werte.append(core_gesamtzeit/runden)
+    #core_werte.append(core_gesamtzeit/runden)
     full_core_werte.append(full_core_gesamtzeit/runden)
-    pbnb_werte.append(ichs2_gesamtzeit/runden)
+    #pbnb_werte.append(ichs2_gesamtzeit/runden)
+    pbnb_half_werte.append(ichs3_gesamtzeit/runden)
     bnb_werte.append(geeks_gesamtzeit/runden)
 
 # line 1 points
@@ -687,8 +698,14 @@ y1 = full_core_werte
 plt.plot(x1, y1, label = "Core")
 
 # line 2 points
+#x2 = setsize
+#y2 = pbnb_werte
+# plotting the line 2 points
+#plt.plot(x2, y2, label = "BnB")
+
+# line 2.1 points
 x2 = setsize
-y2 = pbnb_werte
+y2 = pbnb_half_werte
 # plotting the line 2 points
 plt.plot(x2, y2, label = "BnB")
 

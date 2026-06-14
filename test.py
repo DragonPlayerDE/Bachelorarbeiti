@@ -26,6 +26,8 @@ for f in setsize:
     """Rundenübergreifende Variablen"""
     core_gesamtzeit = 0
     full_core_gesamtzeit = 0
+    core_pareto_gesamtzeit = 0
+    relax_bnb_gesamtzeit = 0
     bnb_gesamtzeit = 0
     ichs2_gesamtzeit = 0
     ichs3_gesamtzeit = 0
@@ -38,9 +40,10 @@ for f in setsize:
     geeks_runden = 0
     ichs_runden = 0
     ich2_runden = 0
-    richtig = 0
+    richtig = 0 # Laufvariable, ob die Algoryths richtig laufen die
     abbruch_zeit = 300 #Zeit bis die Algoryths Abbrechen
-    setprint = False #sollen wa das Set drucken
+    setprint = True #sollen wa das Set drucken
+    vergleich = True #True == Zeit, False == Additionen
     runden = 100
     set = 1
     clusteranzahl = 2  # Wenn Set == 2 relevant
@@ -70,13 +73,13 @@ for f in setsize:
                 """Value Wert knapp über Weight Wert"""
                 for i in range(elemente):
                     weight = random.randint(1, int(1e10))  # zufälliges Gewicht
-                    value = weight+random.randint(1, int(4*1e9))  # Value ist X% höher als maximal Gewicht
+                    value = weight+random.randint(1, int(1*1e9))  # Value ist X% höher als maximal Gewicht
                     arr.append(Item(weight, value))
                     stonks = value / weight  # Effizienz der Items
                     number = i
                     items.append((weight, value, stonks, number))
             if set == 2:
-
+                """Cluster"""
                 for c in range(clusteranzahl):
                     center_weight = random.randint(int(1e9), int(1e10))
                     center_value = random.randint(int(1e9), int(1e10))  # zufälliger Wert zwischen 1 und 10000000000
@@ -89,8 +92,8 @@ for f in setsize:
                         stonks = value / weight  # Effizienz der Items
                         number = (c * int(elemente / clusteranzahl)) + i
                         items.append((weight, value, stonks, number))
-
             if set == 3:
+                """Wahrscheinlichkeitsgrüppchen"""
                 # Erster Punkt völlig zufällig
                 weight = random.randint(1, int(1e10))  # zufälliges Gewicht
                 value = random.randint(1, int(1e10))  # zufälliger Wert zwischen 1 und 10000000000
@@ -112,12 +115,43 @@ for f in setsize:
                     stonks = new_value / new_weight  # Effizienz der Items
                     number = i+1
                     items.append((new_weight, new_value, stonks, number))
-
+            if set == 4:
+                """75% Value Wert knapp über Weight Wert, 25% Arsch"""
+                for i in range(int(elemente*0.75)):
+                    weight = random.randint(1, int(1e10))  # zufälliges Gewicht
+                    value = weight + random.randint(1, int(1 * 1e9))  # Value ist X% höher als maximal Gewicht
+                    arr.append(Item(weight, value))
+                    stonks = value / weight  # Effizienz der Items
+                    number = i
+                    items.append((weight, value, stonks, number))
+                for i in range(int(elemente*0.25)):
+                    weight = random.randint(1, int(1e10))  # zufälliges Gewicht
+                    value = random.randint(1, weight) # Value kleiner als Weight
+                    arr.append(Item(weight, value))
+                    stonks = value / weight  # Effizienz der Items
+                    number = i
+                    items.append((weight, value, stonks, number))
+            if set == 5:
+                """75% Value Wert knapp über Weight Wert, 25% Sehr gut"""
+                for i in range(int(elemente*0.75)):
+                    weight = random.randint(1, int(1e10))  # zufälliges Gewicht
+                    value = weight + random.randint(1, int(1 * 1e9))  # Value ist X% höher als maximal Gewicht
+                    arr.append(Item(weight, value))
+                    stonks = value / weight  # Effizienz der Items
+                    number = i
+                    items.append((weight, value, stonks, number))
+                for i in range(int(elemente*0.25)):
+                    weight = random.randint(1, int(1e10))  # zufälliges Gewicht
+                    value = random.randint(weight+int(1 * 1e9), int(1e10)+int(1 * 1e9)) # Value sehr viel Größer als Weight
+                    arr.append(Item(weight, value))
+                    stonks = value / weight  # Effizienz der Items
+                    number = i
+                    items.append((weight, value, stonks, number))
 
 
         items_create(set)
 
-        if (i ==1 and setprint == True):
+        if (i ==1 and setprint == True and f==1000):
             x = [item[0] for item in items]
             y = [item[1] for item in items]
             plt.xlabel("Gewicht")
@@ -130,6 +164,8 @@ for f in setsize:
                 plt.title((clusteranzahl , 'Cluster'))
             elif (set == 3):
                 plt.title("Random Cluster")
+            elif (set == 4):
+                plt.title("Ähnliches Verhältnis Gewicht und Wert+schlechte Abweicher")
             plt.scatter(x, y)
             plt.axis("equal")
             plt.show()
@@ -294,7 +330,6 @@ for f in setsize:
             global gesamt_volumen
             neue_lösungen = []
             max = 0
-
             for pw, pv in pareto:
                 nw, nv = pw + item[0], pv + item[1]
                 core_pareto += 1
@@ -316,9 +351,11 @@ for f in setsize:
             """
             Entfernt dominierte Lösungen
             """
+            global core_pareto_gesamtzeit
+            pareto_calc = time.perf_counter()
             solutions = sorted(solutions, key=lambda x: (x[0], -x[1]))
+            core_pareto_gesamtzeit += (time.perf_counter() - pareto_calc)
             pareto = []
-
             max_value_so_far = -1
             for weight, value in solutions:
                 if value > max_value_so_far:
@@ -464,6 +501,7 @@ for f in setsize:
         def priority_bound(u, n, arr):
             # Calculate the upper bound of profit for a node in the search tree
             global ich2_runden
+            global relax_bnb_gesamtzeit
             if u.space < 0:
                 return 0
 
@@ -473,6 +511,7 @@ for f in setsize:
             # print(j,profit_bound)
 
             # Greedily add items to the knapsack until the weight limit is reached
+            relax_time= time.perf_counter()
             while j < n and restspace >= arr[j].weight:
                 ich2_runden += 1
                 restspace -= arr[j].weight
@@ -482,6 +521,7 @@ for f in setsize:
             # If there are still items left, calculate the fractional contribution of the next item
             if j < n:
                 profit_bound += int(restspace * arr[j].value / arr[j].weight)
+            relax_bnb_gesamtzeit += (time.perf_counter() - relax_time)
             return profit_bound
 
 
@@ -531,7 +571,7 @@ for f in setsize:
                     return max_profit
             return max_profit
 
-
+        # Branch and Bound von Geeks for Geeks, wird nicht mehr verwendet
         class Node:
             def __init__(self, level, profit, weight):
                 self.level = level  # Level of the node in the decision tree (or index in arr[])
@@ -669,21 +709,27 @@ for f in setsize:
 
     #print("Die Durchschnittliche Core Laufzeit war:", core_gesamtzeit / runden)
     print("Die Durchschnittliche Full_Core Laufzeit war:", full_core_gesamtzeit / runden)
+    print("Dabei ging soviel Zeit für die Pareto rechnung drauf:", core_pareto_gesamtzeit/runden)
     # print("Die Durchschnittliche Nemhauser Ulmann Laufzeit war: ", pareto_gesamtzeit/runden)
     # print("Die Durchschnittliche Branch_Bound Laufzeit war:", bnb_gesamtzeit/runden)
     #print("Die Durchschnittliche Geeks BnB Laufzeit war:", geeks_gesamtzeit/runden)
     #print("Die Durchschnittliche Priority BnB Laufzeit war:", ichs2_gesamtzeit / runden)
     print("Die Durchschnittliche Priority BnB Laufzeit war:", ichs3_gesamtzeit / runden)
+    print("Dabei ging soviel Zeit für die Relax Berechnung drauf:", relax_bnb_gesamtzeit / runden)
     print("Deine Erfolgsrate liegt bei ", (richtig / runden) * 100, "%")
     # print("Ich hab durchschnittlich so viele Runden gebraucht:", ichs_runden/runden)
     print("Priority BnB hat durchschnittlich so viele Runden gebraucht:", ich2_runden / runden)
     #print("Geeks hat durchschnittlich so viele Runden gebraucht:", geeks_runden/runden)
     print("Core hat Durchschnittlich soviele Pareto Lösungen produziert:", core_pareto/runden)
-    #core_werte.append(core_gesamtzeit/runden)
-    full_core_werte.append(full_core_gesamtzeit/runden)
-    #pbnb_werte.append(ichs2_gesamtzeit/runden)
-    pbnb_half_werte.append(ichs3_gesamtzeit/runden)
-    bnb_werte.append(geeks_gesamtzeit/runden)
+    if vergleich == True:
+        # core_werte.append(core_gesamtzeit/runden)
+        full_core_werte.append(full_core_gesamtzeit / runden)
+        # pbnb_werte.append(ichs2_gesamtzeit/runden)
+        pbnb_half_werte.append(ichs3_gesamtzeit / runden)
+        #bnb_werte.append(geeks_gesamtzeit / runden)
+    else :
+        full_core_werte.append(core_pareto / runden)
+        pbnb_half_werte.append(ich2_runden / runden)
 
 # line 1 points
 #x1 = setsize
@@ -722,7 +768,10 @@ plt.yscale('log')
 # naming the x axis
 plt.xlabel('Anzahl Elemente')
 # naming the y axis
-plt.ylabel('Durchschnittliche Dauer pro Runde')
+if vergleich == True:
+    plt.ylabel('Durchschnittliche Dauer pro Runde')
+else:
+    plt.ylabel('Anzahl Additionen')
 # giving a title to my graph
 if (set==0):
     plt.title('Gleichverteiltes Set')

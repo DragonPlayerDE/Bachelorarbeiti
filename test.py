@@ -6,9 +6,8 @@ import time
 from queue import PriorityQueue
 import matplotlib
 matplotlib.use('TkAgg')  # or 'Qt5Agg'
-
 import matplotlib.pyplot as plt
-
+from collections import deque
 
 class Item:
     def __init__(self, weight, value):
@@ -19,6 +18,7 @@ core_werte =[]
 full_core_werte =[]
 pbnb_werte =[]
 pbnb_half_werte =[]
+nullfirst_bnb_werte =[]
 bnb_werte =[]
 setsize=[10,18,32,57,100,179, 316, 566, 1000]
 
@@ -31,6 +31,7 @@ for f in setsize:
     bnb_gesamtzeit = 0
     ichs2_gesamtzeit = 0
     ichs3_gesamtzeit = 0
+    nullfirst_gesamtzeit = 0
     geeks_gesamtzeit = 0
     pareto_gesamtzeit = 0
     global geeks_start_time
@@ -45,7 +46,7 @@ for f in setsize:
     setprint = True #sollen wa das Set drucken
     vergleich = True #True == Zeit, False == Additionen
     runden = 100
-    set = 1
+    set = 0
     clusteranzahl = 2  # Wenn Set == 2 relevant
     spread = 1e9 # Wenn Set == 3 relevant
     """Anzahl Runden wird festgelegt und Array initialisiert"""
@@ -571,6 +572,52 @@ for f in setsize:
                     return max_profit
             return max_profit
 
+        def nullfirst_BnB(W, arr, n, greedy,half):
+            # Sort items based on value-to-weight ratio in non-ascending order
+            arr.sort(key=lambda x: x.value / x.weight, reverse=True)
+
+            priority_queue = deque()
+            u = Toms_Node(-1, W, 0, 0)  # Dummy node at the starting
+            priority_queue.append(u)
+
+            max_profit = greedy
+
+            while not priority_queue == deque([]):
+                u = priority_queue.popleft()
+
+                if u.level == -1:
+                    v = Toms_Node(0, W, int(relaxierte_loesung), 0)  # Starting node
+                elif u.profit_bound >= max_profit:
+                    v = Toms_Node(u.level + 1, u.space, u.profit_bound, u.festwert)  # Nächstes Item wird nicht hinzugefügt
+
+                    v.profit_bound = priority_bound(v, n, arr)
+                    # If the profit_bound value is greater than current maxProfit, add the node to the priority queue for further consideration
+                    if v.profit_bound > max_profit:
+                        priority_queue.append(v)
+
+                    # Nächstes Item wird hinzugefügt
+                    v = Toms_Node(u.level + 1, u.space, u.profit_bound, u.festwert)
+
+                    v.space -= arr[v.level].weight
+                    v.festwert += arr[v.level].value
+
+                    # If the cumulated weight is less than or equal to W and profit is greater than previous profit, update maxProfit
+                    if v.space >= 0 and v.festwert > max_profit:
+                        max_profit = v.festwert
+
+                    if half == False:
+                        v.profit_bound = priority_bound(v, n, arr)
+
+                    # If the bound value is greater than current maxProfit, add the node to the priority queue for further consideration
+                    if v.profit_bound > max_profit and v.space > 0:
+                        priority_queue.append(v)
+
+
+                if(time.perf_counter()-ichs3_start_time > abbruch_zeit):
+                    print("Priority Abbruch")
+                    return max_profit
+            return max_profit
+
         # Branch and Bound von Geeks for Geeks, wird nicht mehr verwendet
         class Node:
             def __init__(self, level, profit, weight):
@@ -669,6 +716,11 @@ for f in setsize:
         mein_2_max_profit = priority_BnB(W, arr, n, greedy,True)
         ichs3_gesamtzeit += (time.perf_counter() - ichs3_start_time)
 
+        # Meine 4. BnB Version, mit Andys Idee, erst den Pfad des nicht gewählten Elementes zu gehen
+        nullfirst_start_time = time.perf_counter()
+        nullfirst_max_profit = nullfirst_BnB(W, arr, n, greedy, True)
+        nullfirst_gesamtzeit += (time.perf_counter() - ichs3_start_time)
+
         # Core Funktion
         #core_value, core_laufzeit = core(gesamt_volumen, items_for_core, False)
         #core_gesamtzeit += core_laufzeit
@@ -688,7 +740,7 @@ for f in setsize:
         # pareto_gesamtzeit += time.perf_counter() - pareto_start_time
 
         # Tester ob alles stimmt
-        if ( full_core_value ==mein_2_max_profit ):
+        if ( full_core_value ==mein_2_max_profit == nullfirst_max_profit ):
             #core_value == mein_max_profit == == max_profit
             richtig += 1
 
@@ -716,6 +768,7 @@ for f in setsize:
     #print("Die Durchschnittliche Priority BnB Laufzeit war:", ichs2_gesamtzeit / runden)
     print("Die Durchschnittliche Priority BnB Laufzeit war:", ichs3_gesamtzeit / runden)
     print("Dabei ging soviel Zeit für die Relax Berechnung drauf:", relax_bnb_gesamtzeit / runden)
+    print("Die Durchschnittliche Nullfirst BnB Laufzeit war:", nullfirst_gesamtzeit / runden)
     print("Deine Erfolgsrate liegt bei ", (richtig / runden) * 100, "%")
     # print("Ich hab durchschnittlich so viele Runden gebraucht:", ichs_runden/runden)
     print("Priority BnB hat durchschnittlich so viele Runden gebraucht:", ich2_runden / runden)
@@ -727,6 +780,8 @@ for f in setsize:
         # pbnb_werte.append(ichs2_gesamtzeit/runden)
         pbnb_half_werte.append(ichs3_gesamtzeit / runden)
         #bnb_werte.append(geeks_gesamtzeit / runden)
+        nullfirst_bnb_werte.append(nullfirst_gesamtzeit/runden)
+
     else :
         full_core_werte.append(core_pareto / runden)
         pbnb_half_werte.append(ich2_runden / runden)
@@ -754,6 +809,12 @@ x2 = setsize
 y2 = pbnb_half_werte
 # plotting the line 2 points
 plt.plot(x2, y2, label = "BnB")
+
+# line 2.2 points
+x3 = setsize
+y3 = nullfirst_bnb_werte
+# plotting the line 2 points
+plt.plot(x3, y3, label = "Nullfirst_BnB")
 
 # line 2.5 points
 #x2 = setsize

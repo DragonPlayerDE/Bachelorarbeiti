@@ -46,7 +46,7 @@ for f in setsize:
     setprint = True #sollen wa das Set drucken
     vergleich = True #True == Zeit, False == Additionen
     runden = 100
-    set = 0
+    set = 1
     clusteranzahl = 2  # Wenn Set == 2 relevant
     spread = 1e9 # Wenn Set == 3 relevant
     """Anzahl Runden wird festgelegt und Array initialisiert"""
@@ -221,12 +221,10 @@ for f in setsize:
             return core_item, relaxierte_loesung, steigung_core
 
 
-        core_item, relaxierte_loesung, steigung_core = relax_init(items, gesamt_volumen,
-                                                                  True)  # Relax Initialisierung für Core
+        core_item, relaxierte_loesung, steigung_core = relax_init(items, gesamt_volumen, True)  # Relax Initialisierung für Core
+
 
         """Relaxierte Lösung von GeeksforGeeks"""
-
-
         def relax(u, n, W, arr):
             # Calculate the upper bound of profit for a node in the search tree
             if u.weight >= W:
@@ -329,16 +327,18 @@ for f in setsize:
         def pareto_knapsack_full(item, pareto, core_volumen):
             global core_pareto
             global gesamt_volumen
+            global core_pareto_gesamtzeit
             neue_lösungen = []
             max = 0
+            pareto_start_time = time.perf_counter()
             for pw, pv in pareto:
                 nw, nv = pw + item[0], pv + item[1]
                 core_pareto += 1
                 if nw <= gesamt_volumen:
                     neue_lösungen.append((nw, nv))
+            core_pareto_gesamtzeit += time.perf_counter()-pareto_start_time
 
-            pareto += neue_lösungen
-            pareto = pareto_filter(pareto)
+            pareto = pareto_filter(pareto,neue_lösungen)
                 # core_pareto += pareto.__len__()
             # beste Lösung (maximaler Wert)
             for pw, pv in pareto:
@@ -348,7 +348,47 @@ for f in setsize:
 
             return max, pareto
 
-        def pareto_filter(solutions: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
+        #neuer Pareto Filter, führt Sweep ohne sortieren aus
+        def pareto_filter(alte_lösungen, neue_lösungen):
+            """
+            Entfernt dominierte Lösungen
+            """
+            pareto = []
+            max_value_so_far = -1
+
+            al = 0
+            nl = 0
+
+            while al < len(alte_lösungen) and nl < len(neue_lösungen):
+                if alte_lösungen[al][0] <= neue_lösungen[nl][0]:
+                    if alte_lösungen[al][1]  > max_value_so_far:
+                        pareto.append((alte_lösungen[al][0], alte_lösungen[al][1]))
+                        max_value_so_far = alte_lösungen[al][1]
+                    al += 1
+                else:
+                    if neue_lösungen[nl][1] > max_value_so_far:
+                        pareto.append((neue_lösungen[nl][0], neue_lösungen[nl][1]))
+                        max_value_so_far = neue_lösungen[nl][1]
+                    nl += 1
+
+            # Restliche Elemente ausgeben
+            while al < len(alte_lösungen):
+                if alte_lösungen[al][1] > max_value_so_far:
+                    pareto.append((alte_lösungen[al][0], alte_lösungen[al][1]))
+                    max_value_so_far = alte_lösungen[al][1]
+                al += 1
+
+            while nl < len(neue_lösungen):
+                if neue_lösungen[nl][1] > max_value_so_far:
+                    pareto.append((neue_lösungen[nl][0], neue_lösungen[nl][1]))
+                    max_value_so_far = neue_lösungen[nl][1]
+                nl += 1
+
+
+            return pareto
+
+        #Alter Pareto filter, muss sortieren
+        def pareto_filter_old(solutions: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
             """
             Entfernt dominierte Lösungen
             """
@@ -364,7 +404,6 @@ for f in setsize:
                     max_value_so_far = value
 
             return pareto
-
 
         def core(gesamt_volumen, items_for_core, full):
             # Start Initialisirung vom Core Rucksack
@@ -699,6 +738,19 @@ for f in setsize:
 
             return max_profit
 
+        def dantzig_heuristik(items_for_core,n):
+            avg_dist = 0
+            max_value = 0
+            for w,v,s,dist in items_for_core:
+                avg_dist += dist
+                if w > max_value:
+                    max_value = w
+            avg_dist = int(avg_dist/n)
+            if avg_dist < 0.1*max_value
+
+
+
+
 
         # Geeks Branch and Bound Funktion
         W = gesamt_volumen
@@ -718,9 +770,9 @@ for f in setsize:
         ichs3_gesamtzeit += (time.perf_counter() - ichs3_start_time)
 
         # Meine 4. BnB Version, mit Andys Idee, erst den Pfad des nicht gewählten Elementes zu gehen
-        nullfirst_start_time = time.perf_counter()
-        nullfirst_max_profit = nullfirst_BnB(W, arr, n, greedy, True)
-        nullfirst_gesamtzeit += (time.perf_counter() - ichs3_start_time)
+        #nullfirst_start_time = time.perf_counter()
+        #nullfirst_max_profit = nullfirst_BnB(W, arr, n, greedy, True)
+        #nullfirst_gesamtzeit += (time.perf_counter() - ichs3_start_time)
 
         # Core Funktion
         #core_value, core_laufzeit = core(gesamt_volumen, items_for_core, False)
@@ -741,8 +793,8 @@ for f in setsize:
         # pareto_gesamtzeit += time.perf_counter() - pareto_start_time
 
         # Tester ob alles stimmt
-        if ( full_core_value ==mein_2_max_profit == nullfirst_max_profit ):
-            #core_value == mein_max_profit == == max_profit
+        if ( full_core_value ==mein_2_max_profit ):
+            #core_value == mein_max_profit == == max_profit== nullfirst_max_profit
             richtig += 1
 
         """
@@ -769,7 +821,7 @@ for f in setsize:
     #print("Die Durchschnittliche Priority BnB Laufzeit war:", ichs2_gesamtzeit / runden)
     print("Die Durchschnittliche Priority BnB Laufzeit war:", ichs3_gesamtzeit / runden)
     print("Dabei ging soviel Zeit für die Relax Berechnung drauf:", relax_bnb_gesamtzeit / runden)
-    print("Die Durchschnittliche Nullfirst BnB Laufzeit war:", nullfirst_gesamtzeit / runden)
+    #print("Die Durchschnittliche Nullfirst BnB Laufzeit war:", nullfirst_gesamtzeit / runden)
     print("Deine Erfolgsrate liegt bei ", (richtig / runden) * 100, "%")
     # print("Ich hab durchschnittlich so viele Runden gebraucht:", ichs_runden/runden)
     print("Priority BnB hat durchschnittlich so viele Runden gebraucht:", ich2_runden / runden)
@@ -781,7 +833,7 @@ for f in setsize:
         # pbnb_werte.append(ichs2_gesamtzeit/runden)
         pbnb_half_werte.append(ichs3_gesamtzeit / runden)
         #bnb_werte.append(geeks_gesamtzeit / runden)
-        nullfirst_bnb_werte.append(nullfirst_gesamtzeit/runden)
+        #nullfirst_bnb_werte.append(nullfirst_gesamtzeit/runden)
 
     else :
         full_core_werte.append(core_pareto / runden)
@@ -812,10 +864,10 @@ y2 = pbnb_half_werte
 plt.plot(x2, y2, label = "BnB")
 
 # line 2.2 points
-x3 = setsize
-y3 = nullfirst_bnb_werte
+#x3 = setsize
+#y3 = nullfirst_bnb_werte
 # plotting the line 2 points
-plt.plot(x3, y3, label = "Nullfirst_BnB")
+#plt.plot(x3, y3, label = "Nullfirst_BnB")
 
 # line 2.5 points
 #x2 = setsize

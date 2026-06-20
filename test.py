@@ -505,6 +505,8 @@ for f in setsize:
             global relax_bnb_gesamtzeit
             if u.space < 0:
                 return 0
+            if u.level == 0:
+                return 0
 
             profit_bound = u.festwert
             j = u.level + 1
@@ -576,28 +578,27 @@ for f in setsize:
             # Sort items based on value-to-weight ratio in non-ascending order
             arr.sort(key=lambda x: x.value / x.weight, reverse=True)
 
-            priority_queue = deque()
-            u = Toms_Node(-1, W, 0, 0)  # Dummy node at the starting
-            priority_queue.append(u)
+            nullfirst_queue = deque()
+            u = Toms_Node(-1, W, int(relaxierte_loesung), 0)  # Dummy node at the starting
+            nullfirst_queue.append(u)
 
             max_profit = greedy
 
-            while not priority_queue == deque([]):
-                u = priority_queue.popleft()
+            while nullfirst_queue:
+                u = nullfirst_queue.popleft()
 
-                if u.level == -1:
-                    v = Toms_Node(0, W, int(relaxierte_loesung), 0)  # Starting node
-                elif u.profit_bound >= max_profit:
+                if u.profit_bound >= max_profit and u.level < n-1:
                     v = Toms_Node(u.level + 1, u.space, u.profit_bound, u.festwert)  # Nächstes Item wird nicht hinzugefügt
 
                     v.profit_bound = priority_bound(v, n, arr)
                     # If the profit_bound value is greater than current maxProfit, add the node to the priority queue for further consideration
                     if v.profit_bound > max_profit:
-                        priority_queue.append(v)
+                        nullfirst_queue.append(v)
 
                     # Nächstes Item wird hinzugefügt
                     v = Toms_Node(u.level + 1, u.space, u.profit_bound, u.festwert)
-
+                    if v.level == n:
+                        print("Ja scheise", n,v.level)
                     v.space -= arr[v.level].weight
                     v.festwert += arr[v.level].value
 
@@ -610,7 +611,7 @@ for f in setsize:
 
                     # If the bound value is greater than current maxProfit, add the node to the priority queue for further consideration
                     if v.profit_bound > max_profit and v.space > 0:
-                        priority_queue.append(v)
+                        nullfirst_queue.append(v)
 
 
                 if(time.perf_counter()-ichs3_start_time > abbruch_zeit):

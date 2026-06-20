@@ -41,9 +41,12 @@ for f in setsize:
     geeks_runden = 0
     ichs_runden = 0
     ich2_runden = 0
+    danzig_heu_correct =0 #Wie Korrekt ist der schätzer
+    danzig_schätzer = [[0,0],[0,0]] #Was schätzt der Danzig schätzer
     richtig = 0 # Laufvariable, ob die Algoryths richtig laufen die
     abbruch_zeit = 300 #Zeit bis die Algoryths Abbrechen
-    setprint = True #sollen wa das Set drucken
+    setprint = False #sollen wa das Set drucken
+    heuristik_print = True #wollen wa ne Tabelle sehen?
     vergleich = True #True == Zeit, False == Additionen
     runden = 100
     set = 1
@@ -741,12 +744,18 @@ for f in setsize:
         def dantzig_heuristik(items_for_core,n):
             avg_dist = 0
             max_value = 0
-            for w,v,s,dist in items_for_core:
-                avg_dist += dist
+            for w,v,s,dist,ö in items_for_core:
+                if dist >= 0:
+                    avg_dist += dist
+                else:
+                    avg_dist -= dist
                 if w > max_value:
                     max_value = w
             avg_dist = int(avg_dist/n)
-            if avg_dist < 0.1*max_value
+            if avg_dist >= 0.2*max_value:
+                return 0 #Wir empfehlen Core
+            else:
+                return 1 #Wir empfehlen BnB
 
 
 
@@ -768,6 +777,7 @@ for f in setsize:
         ichs3_start_time = time.perf_counter()
         mein_2_max_profit = priority_BnB(W, arr, n, greedy,True)
         ichs3_gesamtzeit += (time.perf_counter() - ichs3_start_time)
+        bnb_laufzeit = (time.perf_counter() - ichs3_start_time)
 
         # Meine 4. BnB Version, mit Andys Idee, erst den Pfad des nicht gewählten Elementes zu gehen
         #nullfirst_start_time = time.perf_counter()
@@ -796,6 +806,20 @@ for f in setsize:
         if ( full_core_value ==mein_2_max_profit ):
             #core_value == mein_max_profit == == max_profit== nullfirst_max_profit
             richtig += 1
+
+        danzig_heu = dantzig_heuristik(items_for_core,n)
+
+        if (danzig_heu == 0):
+            if (bnb_laufzeit >= core_laufzeit):
+                danzig_schätzer[0][0] += 1
+            else:
+                danzig_schätzer[0][1] += 1
+        else:
+            if (bnb_laufzeit >= core_laufzeit):
+                danzig_schätzer[1][0] += 1
+            else:
+                danzig_schätzer[1][1] += 1
+
 
         """
         if (max_profit < core_value):
@@ -827,6 +851,29 @@ for f in setsize:
     print("Priority BnB hat durchschnittlich so viele Runden gebraucht:", ich2_runden / runden)
     #print("Geeks hat durchschnittlich so viele Runden gebraucht:", geeks_runden/runden)
     print("Core hat Durchschnittlich soviele Pareto Lösungen produziert:", core_pareto/runden)
+
+    """Heuristik Tester veranschaulichen"""
+    if heuristik_print == True:
+
+        fig, ax = plt.subplots()
+        ax.axis('off')
+
+        ax.table(
+            cellText=danzig_schätzer,
+            rowLabels=['Core Schneller', 'BnB Schneller'],
+            colLabels=["Heuristik Core", "Heuristik BnB"],
+            loc='center'
+        )
+
+        if (set == 0):
+            plt.title('Gleichverteiltes Set')
+        elif (set == 1):
+            plt.title('Ähnliches Verhältnis Gewicht und Wert')
+        elif (set == 2):
+            plt.title((clusteranzahl, 'Cluster'))
+
+        plt.show()
+
     if vergleich == True:
         # core_werte.append(core_gesamtzeit/runden)
         full_core_werte.append(full_core_gesamtzeit / runden)

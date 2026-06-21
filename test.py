@@ -20,7 +20,7 @@ pbnb_werte =[]
 pbnb_half_werte =[]
 nullfirst_bnb_werte =[]
 bnb_werte =[]
-setsize=[10,18,32,57,100,179, 316, 566, 1000]
+setsize=[10,18,32,57,100,179, 316, 566,1000] #
 
 for f in setsize:
     """Rundenübergreifende Variablen"""
@@ -43,10 +43,11 @@ for f in setsize:
     ich2_runden = 0
     danzig_heu_correct =0 #Wie Korrekt ist der schätzer
     danzig_schätzer = [[0,0],[0,0]] #Was schätzt der Danzig schätzer
+    danzig_zeit = [0,0] #Abweichung der Falschen
     richtig = 0 # Laufvariable, ob die Algoryths richtig laufen die
     abbruch_zeit = 300 #Zeit bis die Algoryths Abbrechen
     setprint = False #sollen wa das Set drucken
-    heuristik_print = True #wollen wa ne Tabelle sehen?
+    heuristik_print = False #wollen wa ne Tabelle sehen?
     vergleich = True #True == Zeit, False == Additionen
     runden = 100
     set = 1
@@ -278,8 +279,6 @@ for f in setsize:
         #   print(item)
 
         """Code zum Bruteforcen, wurde in früherer Iteration von Core verwendet"""
-
-
         def knapsack_bruteforce(items, capacity):
             n = len(items)
             best_value = 0
@@ -297,8 +296,7 @@ for f in setsize:
             return best_value, best_combination
 
 
-        """Pareto Lösung. Wird im Core verwendet"""
-
+        """Alte Pareto Lösung, geht immer alle Items durch. Wird im Core verwendet"""
 
         def pareto_knapsack(items, max_weight):
             global core_pareto
@@ -327,6 +325,8 @@ for f in setsize:
             # beste Lösung (maximaler Wert)
             return max(pareto, key=lambda x: x[1])[1]
 
+
+        """Verbesserte Pareto Lösung, betrachtet nur nächstes Item. Wird im Core verwendet"""
         def pareto_knapsack_full(item, pareto, core_volumen):
             global core_pareto
             global gesamt_volumen
@@ -341,7 +341,7 @@ for f in setsize:
                     neue_lösungen.append((nw, nv))
             core_pareto_gesamtzeit += time.perf_counter()-pareto_start_time
 
-            pareto = pareto_filter(pareto,neue_lösungen)
+            pareto = pareto_filter_old(pareto,neue_lösungen)
                 # core_pareto += pareto.__len__()
             # beste Lösung (maximaler Wert)
             for pw, pv in pareto:
@@ -391,12 +391,17 @@ for f in setsize:
             return pareto
 
         #Alter Pareto filter, muss sortieren
-        def pareto_filter_old(solutions: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
+        def pareto_filter_old(alte_lösungen, neue_lösungen):
             """
             Entfernt dominierte Lösungen
             """
             global core_pareto_gesamtzeit
             pareto_calc = time.perf_counter()
+            solutions =[]
+            for pw, pv in alte_lösungen:
+                solutions.append([pw,pv])
+            for pw, pv in neue_lösungen:
+                solutions.append([pw,pv])
             solutions = sorted(solutions, key=lambda x: (x[0], -x[1]))
             core_pareto_gesamtzeit += (time.perf_counter() - pareto_calc)
             pareto = []
@@ -445,7 +450,8 @@ for f in setsize:
             return value_feste_items + current_core_value, core_laufzeit
 
 
-        """Startinitialisierung des Baumes"""
+        """Startinitialisierung des 1. Baumes(veraltet)"""
+        """
         bestes_blatt = []
         # print(greedy)
         bestes_blatt.append(greedy)
@@ -459,9 +465,9 @@ for f in setsize:
         baum = []
         baum.append(bauminit)
         branch_time = 0
+        """
 
         """Boundfunnktion um Überflüssig Knoten abzuschneiden"""
-
 
         def tom_bound(top):
             global ichs_runden
@@ -508,10 +514,6 @@ for f in setsize:
             # TODO Branchen an gebrochener Variable
 
 
-        """Bruteforce auf Alles. Versagt nach 25 Elementen"""
-        # best_value, best_items = knapsack_bruteforce(items_for_core, gesamt_volumen)
-        # print("Bruteforce Lösung:", best_value)
-        # print("Gewählte Items:", best_items)
 
         """Branch and Bound auf alles"""
 
@@ -546,8 +548,6 @@ for f in setsize:
             global ich2_runden
             global relax_bnb_gesamtzeit
             if u.space < 0:
-                return 0
-            if u.level == 0:
                 return 0
 
             profit_bound = u.festwert
@@ -616,6 +616,7 @@ for f in setsize:
                     return max_profit
             return max_profit
 
+        """Andis Idee für BnB"""
         def nullfirst_BnB(W, arr, n, greedy,half):
             # Sort items based on value-to-weight ratio in non-ascending order
             arr.sort(key=lambda x: x.value / x.weight, reverse=True)
@@ -749,10 +750,10 @@ for f in setsize:
                     avg_dist += dist
                 else:
                     avg_dist -= dist
-                if w > max_value:
-                    max_value = w
+                if v > max_value:
+                    max_value = v
             avg_dist = int(avg_dist/n)
-            if avg_dist >= 0.2*max_value:
+            if avg_dist >= 0.065*max_value:
                 return 0 #Wir empfehlen Core
             else:
                 return 1 #Wir empfehlen BnB
@@ -779,6 +780,12 @@ for f in setsize:
         ichs3_gesamtzeit += (time.perf_counter() - ichs3_start_time)
         bnb_laufzeit = (time.perf_counter() - ichs3_start_time)
 
+        """Bruteforce auf Alles. Versagt nach 25 Elementen"""
+        #if (n == 10 or n == 18):
+            #best_value, best_items = knapsack_bruteforce(items_for_core, gesamt_volumen)
+        # print("Bruteforce Lösung:", best_value)
+        # print("Gewählte Items:", best_items)
+
         # Meine 4. BnB Version, mit Andys Idee, erst den Pfad des nicht gewählten Elementes zu gehen
         #nullfirst_start_time = time.perf_counter()
         #nullfirst_max_profit = nullfirst_BnB(W, arr, n, greedy, True)
@@ -803,10 +810,12 @@ for f in setsize:
         # pareto_gesamtzeit += time.perf_counter() - pareto_start_time
 
         # Tester ob alles stimmt
-        if ( full_core_value ==mein_2_max_profit ):
-            #core_value == mein_max_profit == == max_profit== nullfirst_max_profit
+        if (full_core_value == mein_2_max_profit):
+            #== core_value == mein_max_profit == max_profit == nullfirst_max_profit == best_value
             richtig += 1
 
+        """Danzig Ray Heuristik"""
+        """
         danzig_heu = dantzig_heuristik(items_for_core,n)
 
         if (danzig_heu == 0):
@@ -814,13 +823,16 @@ for f in setsize:
                 danzig_schätzer[0][0] += 1
             else:
                 danzig_schätzer[0][1] += 1
+                danzig_zeit[0] += (core_laufzeit - bnb_laufzeit)/n
         else:
             if (bnb_laufzeit >= core_laufzeit):
                 danzig_schätzer[1][0] += 1
+                danzig_zeit[0] += (bnb_laufzeit-core_laufzeit)/n
             else:
                 danzig_schätzer[1][1] += 1
+        """
 
-
+        """ KP Diggi """
         """
         if (max_profit < core_value):
             print(f"Core zu groß: {max_profit} < {core_value}")
@@ -851,6 +863,8 @@ for f in setsize:
     print("Priority BnB hat durchschnittlich so viele Runden gebraucht:", ich2_runden / runden)
     #print("Geeks hat durchschnittlich so viele Runden gebraucht:", geeks_runden/runden)
     print("Core hat Durchschnittlich soviele Pareto Lösungen produziert:", core_pareto/runden)
+    #danzig_zeit[1] = (ichs3_gesamtzeit-core_pareto_gesamtzeit)/n
+    #print("Die Falschen der Danzig Heuristik sind soviel Zeit ausseinander, der Durchschnittliche Zeitabstand ist:", danzig_zeit)
 
     """Heuristik Tester veranschaulichen"""
     if heuristik_print == True:
@@ -860,15 +874,15 @@ for f in setsize:
 
         ax.table(
             cellText=danzig_schätzer,
-            rowLabels=['Core Schneller', 'BnB Schneller'],
-            colLabels=["Heuristik Core", "Heuristik BnB"],
+            rowLabels=["Heuristik Core", "Heuristik BnB"],
+            colLabels=['Core Schneller', 'BnB Schneller'],
             loc='center'
         )
 
         if (set == 0):
             plt.title('Gleichverteiltes Set')
         elif (set == 1):
-            plt.title('Ähnliches Verhältnis Gewicht und Wert')
+            plt.title('Ähnliches Verhältnis Gewicht und Wert 10%')
         elif (set == 2):
             plt.title((clusteranzahl, 'Cluster'))
 

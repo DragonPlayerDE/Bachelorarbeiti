@@ -1,3 +1,4 @@
+import math
 import random
 from itertools import combinations
 from typing import List, Tuple
@@ -34,6 +35,7 @@ for f in setsize:
     nullfirst_gesamtzeit = 0
     geeks_gesamtzeit = 0
     pareto_gesamtzeit = 0
+    pareto_heuristik_avg =0
     global geeks_start_time
     global ichs2_start_time
     global core
@@ -78,7 +80,7 @@ for f in setsize:
                 """Value Wert knapp über Weight Wert"""
                 for i in range(elemente):
                     weight = random.randint(1, int(1e10))  # zufälliges Gewicht
-                    value = weight+random.randint(1, int(1*1e9))  # Value ist X% höher als maximal Gewicht
+                    value = weight+random.randint(1, int(2*1e9))  # Value ist X% höher als maximal Gewicht
                     arr.append(Item(weight, value))
                     stonks = value / weight  # Effizienz der Items
                     number = i
@@ -155,7 +157,7 @@ for f in setsize:
 
 
         items_create(set)
-
+        """Set wird einmal Beispielhaft geprinted bei 1000 Items"""
         if (i ==1 and setprint == True and f==1000):
             x = [item[0] for item in items]
             y = [item[1] for item in items]
@@ -296,7 +298,7 @@ for f in setsize:
             return best_value, best_combination
 
 
-        """Alte Pareto Lösung, geht immer alle Items durch. Wird im Core verwendet"""
+        """Alte Pareto Lösung, geht immer alle Items durch. Wird nicht mehr im Core verwendet"""
 
         def pareto_knapsack(items, max_weight):
             global core_pareto
@@ -341,7 +343,7 @@ for f in setsize:
                     neue_lösungen.append((nw, nv))
             core_pareto_gesamtzeit += time.perf_counter()-pareto_start_time
 
-            pareto = pareto_filter_old(pareto,neue_lösungen)
+            pareto = pareto_filter(pareto,neue_lösungen)
                 # core_pareto += pareto.__len__()
             # beste Lösung (maximaler Wert)
             for pw, pv in pareto:
@@ -758,6 +760,26 @@ for f in setsize:
             else:
                 return 1 #Wir empfehlen BnB
 
+        """Rechnet (alle) Pareto Lösungen für die Heuristik aus"""
+        def all_pareto_knapsack(item, pareto):
+            global gesamt_volumen
+            neue_lösungen = []
+            for pw, pv in pareto:
+                nw, nv = pw + item[0], pv + item[1]
+                if nw <= gesamt_volumen:
+                    neue_lösungen.append((nw, nv))
+
+            pareto = pareto_filter(pareto,neue_lösungen)
+            return pareto
+        def pareto_heuristik(items,n):
+            sample = random.sample(items, k=int(math.log(n)))
+            pareto=[(0,0)]
+            for i in sample:
+                pareto = all_pareto_knapsack(i, pareto)
+            return len(pareto)
+
+
+
 
 
 
@@ -765,6 +787,8 @@ for f in setsize:
         # Geeks Branch and Bound Funktion
         W = gesamt_volumen
         n = len(arr)
+        pareto_heuristik_avg += pareto_heuristik(items, n)
+
         #geeks_start_time = time.perf_counter()
         #max_profit = knapsack(W, arr, n)
         #geeks_gesamtzeit += (time.perf_counter()-geeks_start_time)
@@ -863,6 +887,7 @@ for f in setsize:
     print("Priority BnB hat durchschnittlich so viele Runden gebraucht:", ich2_runden / runden)
     #print("Geeks hat durchschnittlich so viele Runden gebraucht:", geeks_runden/runden)
     print("Core hat Durchschnittlich soviele Pareto Lösungen produziert:", core_pareto/runden)
+    print("Die Pareto Heuristik hat Durchschnittlich soviele Pareto Lösungen produziert:", pareto_heuristik_avg/runden)
     #danzig_zeit[1] = (ichs3_gesamtzeit-core_pareto_gesamtzeit)/n
     #print("Die Falschen der Danzig Heuristik sind soviel Zeit ausseinander, der Durchschnittliche Zeitabstand ist:", danzig_zeit)
 
